@@ -1,0 +1,172 @@
+Oberheim OB-Mx Calibration Procedure
+(12 voice bd Cal)
+12/6/94 4:45 PM
+
+v1.0 transcribed by Ben Allen 2017-05-15
+Thanks to Mark Glinsky and Tom Virostek
+
+
+1) Turn off power switch. Disconnect AC power cord from rear of OB-Mx.
+
+2) Remove screws that attach top cover. Remove top cover.
+
+3) Remove Master Board from the card cage, using the card ejectors. The Master Board is the card closest to the front panel.
+
+CAUTION: Be careful not to damage the ribbon cables. Also, be careful not to short the lithium battery terminals (on rear PCB) to the chassis ground.
+
+4) Remove and replace IC U7 with the CAL EPROM. Be careful not to bend the EPROM leads.
+
+Connect dual trace oscilloscope probes (or wires) to the right side of R57 and R58 (the side closest C60 and U29). Connect scope ground lead to unpainted OB-Mx chassis.
+
+Set oscilloscope Volt/Div. to 0.5V (for 1X probes). Set Vert mode to ADD (to sum both channels together). Set Time/Div. to 2mSec.
+
+5) Reinsert the Master Board into the card cage.
+
+6) Install all voice boards into the card cage.
+
+7) Connect the AC power cord and turn on the power switch.
+
+8) The display will briefly show:
+Oberheim OB-Mx version X.XX
+Calibration Software
+
+9) The display will then show:
+Instrument: XXX
+
+Place the cover on top of the unit.
+
+Allow the unit to warm up for at least 15 minutes before proceeding.
+
+10) Press these (4) buttons simultaneously:
+Voices, MIDI, Matrix, Options
+
+11) The display should show:
+CALIBRATION and TEST
+
+12) This procedure will utilize several of the numbered 'Voice Status' buttons (along the bottom edge of the front panel) and the 'Trigger' button (which is located above and to the left of the headphone jack).
+
+13) Press the 1 button to start the Calibration. The display will show:
+CALIB: par:1 VCO1 v#:1 val:0
+
+v# = voice number.
+val = new adjustment value.
+0 indicates no change.
+
+14) The reference tone should now be audible.
+
+15) Press and continue to hold the Trigger button. While still holding the Trigger button, adjust the Data Adj Knob (located just below the display). Adjust the VCO1 output for voice 1, until the frequency matches (as close as possible) the reference tone. [NOTE: This is a coarse adjustment, and it may not be possible to 'Zero Beat' the two signals. It is not necessary, because the circuit will do the fine tune adjustment.]
+
+16) Release the Trigger button. Then press and hold it again. Use Data Adj knob to adjust the VCO1 output for voice 2. Repeat this step for all the remaining voices.
+
+17) Press the 3 button. The display will show:
+CALIB: par:3 VCO2 v#:1 val:0
+
+18) Press and continue to hold the Trigger button. Use the Data Adj knob to adjust the VCO2 output for voice 1.
+
+19) Release the Trigger button. Then press and hold it again. Use the Data Adj knob to adjust the VCO2 output for voice 2. Repeat this step for all the remaining voices.
+
+20) Press the 8 button. The display will show:
+CALIB: par:8 OB Resonance
+
+The reference tone will stop.
+
+21) Press and hold the Trigger button. Use the Data Adj knob to adjust the OB Resonance output for a 1 division signal (using the Oscilloscope). The output should be 0.5Vp-p (summed output). Repeat for all voices.
+
+22) Press the 7 button. The display will show:
+CALIB: par:7 OB offset
+
+The reference tone will be audible.
+
+23) Press and hold the Trigger button. Adjust the Data Adj knob until the reference tone and OB output are as close as can be adjusted. Repeat for all voices.
+
+24) Press the 6 button. The display will show:
+CALIB: par:6 MM resonance
+
+The reference tone will stop.
+
+25) Set both channels of the oscilloscope to 2.0Volt/Div. Press and hold the Trigger button. Adjust the Data Adj knob until the summed output is 4 division (8Vp-p). Repeat for all voices.
+
+26) Press the 5 button. The display will show:
+CALIB: par:5 VCA leakage
+
+27) Turn the OB-Mx volume knob to full clockwise. Turn VCA Offset to full clockwise. Turn the amplifier to maximum volume level. Press and hold the Trigger button. If you hear a fluttering noise, use the Data Adj knob to minimize the sound. Repeat for all voices.
+
+28) Return the amplifier gain, and OB-Mx volume control to normal settings. Turn the VCA offset knob to the full counter clockwise position.
+
+29) Press the 12 button. The display will briefly show:
+calibration stored
+
+30) Press the 10 button. to turn off the Reference signal
+
+31) Press the Tune button. The display should show:
+Tune Voices?
+
+32) Press the Tune button again. The display should show:
+-Tuning Voices-
+
+33) Press the 2 button. The display will show:
+CALIB: par:2 VCO1 linear
+
+34) Press and hold the Trigger button. Adjust the Data Adj knob until the reference tone and VCO linear output signal 'Zero Beat' observe with a scope). Repeat for all voices.
+
+NOTE: If VCO linear output can not be adjusted for 'Zero Beat', then the voice card is to be rejected to the rework station. Replace the appropriate VCO LIN resistor (R151, R119, R168, R139).
+
+35) Repeat steps 30 to 32 to tune the unit. Be sure to turn off the reference tone.
+
+36) Repeat steps 33, 34, 35 four more times. You will need to adjust the VCO1 linearity a total of five times.
+
+37) Press the 4 button. The display will show:
+CALIB: par:4 VCO2 linear
+
+38) Press and hold the Trigger button. Adjust the Data Adj knob until the reference tone and the VCO linear output signal 'Zero Beat' (observe with a scope). Repeat for all voices.
+
+NOTE: If VCO linear output can not be adjusted for 'Zero Beat', then the voice card is to be rejected to the rework station. Replace the appropriate VCO LIN resistor (R151, R119, R168, R139).
+
+39) Repeat steps 30 to 32 to tune the unit. Be sure to turn off the reference tone.
+
+40) Repeat steps 37, 38, 39 four more times. You will need to adjust the VCO2 linearity a total of five times.
+
+41) Press the 12 button. The display will briefly show:
+calibration stored
+
+42) Press the Program button. The display will show:
+Instrument:XXX
+
+43) Use the Data Adj knob to select instrument '#128 Initial Conditions'.
+
+44) Check the button 1 and 2 in the 'Voltage Controlled Oscillators' section. Make sure that only the triangle waveform is selected for VCO1. All waveforms for the VCO2 should be off.
+
+NOTE: Make sure that only one oscillator is enabled.
+
+45) Press the Tune button. The display should show:
+Tune Voices?
+
+46) Press the Tune button again. The display should show:
+-Tuning Voices-
+
+47) The display should show:
+Instrument:128 Initial Conditions
+
+Wait a few seconds after the display returns to normal. Occasionally some of the voices are still tuning even though the display has returned to normal. You can hear this by turning the VCA Offset full clockwise (and increase the volume until you hear the output signal) prior to tuning.
+
+48) Connect a MIDI keyboard to the MIDI IN jack. Connect a tuner to the OB-Mx audio output. Play middle 'C' (or C4), and check that all voices are within plus or minus 4 CENT of 'C4'.
+
+49) Play two octaves below middle 'C' (or C2). Check that all voices are within plus or minus 6 CENT of 'C2'.
+
+50) Play three octaves above middle 'C' (or C7). Check that all voices are within plus or minus 7 CENT of 'C7'.
+
+51) Turn off power switch. Disconnect AC power cord from rear of OB-Mx.
+
+52) Remove Master Board from the card cage, using the card ejectors. The Master Board is the card closest to the front panel.
+
+CAUTION: Be careful not to damage the ribbon cables. Also, be careful not to short the lithium battery terminals (on rear of PCB) to the chassis ground.
+
+53) Remove and replace IC U7 with the production EPROM. Be careful not to bend the EPROM leads.
+
+Disconnect dual trace oscilloscope probes (or wires) from the right side of R57 and R58 (the side closest to C60 and U29).
+
+54) Reinsert the Master Board into the card cage.
+
+55) Install top cover and screws.
+
+56) Reconnect the power cord and turn on the OB-Mx. Tune the unit. Check that it performs normally.
