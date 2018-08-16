@@ -1,0 +1,1072 @@
+bplist00Ò_WebMainResource_WebSubresourcesÕ	
+_WebResourceData_WebResourceMIMEType_WebResourceTextEncodingName_WebResourceFrameName^WebResourceURLO7b<html><head>
+
+
+<script type="text/javascript" src="/static/js/analytics.js"></script>
+<script type="text/javascript">archive_analytics.values.server_name="wwwb-app4.us.archive.org";archive_analytics.values.server_ms=1555;</script>
+<link type="text/css" rel="stylesheet" href="/static/css/banner-styles.css">
+
+
+   <title>Beware The Technohick Takeover/p. 1</title>
+<script language="JavaScript1.1"><!--
+/* Persenelaiz Stats */
+cgi = new Image();
+cgi.src = "/web/20021217224030/http://www.twoswift.com.sg/cgi-bin/hostlog/hostlog.cgi"+"?"+escape(document.referrer)+"|gibson";
+// --></script>
+</head>
+<body bgcolor="#FFFFFF"><div id="wm-ipp" lang="en" style="display: block;">
+
+<div style="position:fixed;left:0;top:0;width:100%!important">
+<div id="wm-ipp-inside">
+   <table style="width:100%;"><tbody><tr>
+   <td id="wm-logo">
+       <a href="/web/" title="Wayback Machine home page"><img src="/static/images/toolbar/wayback-toolbar-logo.png" alt="Wayback Machine" width="110" height="39" border="0"></a>
+   </td>
+   <td class="c">
+       <table style="margin:0 auto;"><tbody><tr>
+       <td class="u" colspan="2">
+       <form target="_top" method="get" action="/web/form-submit.jsp" name="wmtb" id="wmtb"><input type="text" name="url" id="wmtbURL" value="http://stephengoldin.com/gibson/technohick01.html" style="width:400px;" onfocus="this.focus();this.select();"><input type="hidden" name="type" value="replay"><input type="hidden" name="date" value="20021217224030"><input type="submit" value="Go"><span id="wm_tb_options" style="display:block;"></span></form>
+       </td>
+       <td class="n" rowspan="2">
+           <table><tbody>
+           <!-- NEXT/PREV MONTH NAV AND MONTH INDICATOR -->
+           <tr class="m">
+           	<td class="b" nowrap="nowrap">
+		
+		    <a href="/web/20020829185757/http://stephengoldin.com/gibson/technohick01.html" title="29 Aug 2002">AUG</a>
+		
+		</td>
+		<td class="c" id="displayMonthEl" title="You are here: 22:40:30 Dec 17, 2002">DEC</td>
+		<td class="f" nowrap="nowrap">
+		
+		    <a href="/web/20030227163526/http://stephengoldin.com/gibson/technohick01.html" title="27 Feb 2003"><strong>FEB</strong></a>
+		
+                </td>
+	    </tr>
+           <!-- NEXT/PREV CAPTURE NAV AND DAY OF MONTH INDICATOR -->
+           <tr class="d">
+               <td class="b" nowrap="nowrap">
+               
+                   <a href="/web/20020829185757/http://stephengoldin.com/gibson/technohick01.html" title="18:57:57 Aug 29, 2002"><img src="/static/images/toolbar/wm_tb_prv_on.png" alt="Previous capture" width="14" height="16" border="0"></a>
+               
+               </td>
+               <td class="c" id="displayDayEl" style="width:34px;font-size:24px;" title="You are here: 22:40:30 Dec 17, 2002">17</td>
+	       <td class="f" nowrap="nowrap">
+               
+		   <a href="/web/20030227163526/http://stephengoldin.com/gibson/technohick01.html" title="16:35:26 Feb 27, 2003"><img src="/static/images/toolbar/wm_tb_nxt_on.png" alt="Next capture" width="14" height="16" border="0"></a>
+	       
+	       </td>
+           </tr>
+           <!-- NEXT/PREV YEAR NAV AND YEAR INDICATOR -->
+           <tr class="y">
+	       <td class="b" nowrap="nowrap">
+               
+                   <a href="/web/20010423234143/http://stephengoldin.com/gibson/technohick01.html" title="23 Apr 2001"><strong>2001</strong></a>
+               
+               </td>
+               <td class="c" id="displayYearEl" title="You are here: 22:40:30 Dec 17, 2002">2002</td>
+	       <td class="f" nowrap="nowrap">
+               
+	           <a href="/web/20040104080322/http://stephengoldin.com/gibson/technohick01.html" title="4 Jan 2004"><strong>2004</strong></a>
+	       
+	       </td>
+           </tr>
+           </tbody></table>
+       </td>
+       </tr>
+       <tr>
+       <td class="s">
+           <a class="t" href="/web/20021217224030*/http://stephengoldin.com/gibson/technohick01.html" title="See a list of every capture for this URL">25 captures</a>
+           <div class="r" title="Timespan for captures of this URL">23 Apr 01 - 7 Dec 16</div>
+       </td>
+       <td class="k">
+       <a href="" id="wm-graph-anchor">
+       <div id="wm-ipp-sparkline" title="Explore captures for this URL">
+	 <img id="sparklineImgId" alt="sparklines" onmouseover="__wm.st(1)" onmouseout="__wm.st(0)" onmousemove="__wm.mv(event,this)" width="550" height="27" border="0" src="/web/jsp/graph.jsp?graphdata=550_27_1996:-1:000000000000_1997:-1:000000000000_1998:-1:000000000000_1999:-1:000000000000_2000:-1:000000000000_2001:-1:000100000000_2002:11:100001010001_2003:-1:010000000100_2004:-1:101100010010_2005:-1:111100010000_2006:-1:100000000000_2007:-1:000000000000_2008:-1:000000000000_2009:-1:010000000000_2010:-1:000000000000_2011:-1:000000000000_2012:-1:000000000100_2013:-1:001000100000_2014:-1:000000000001_2015:-1:000000000000_2016:-1:001000000001_2017:-1:000000000000">
+       <div class="yt" style="display: none; width: 25px; height: 27px;"></div><div class="mt" style="display: none; width: 2px; height: 27px;"></div></div>
+       </a>
+       </td>
+       </tr></tbody></table>
+   </td>
+   <td class="r">
+       <a href="#close" onclick="__wm.h();return false;" style="background-image:url(/static/images/toolbar/wm_tb_close.png);top:5px;" title="Close the toolbar">Close</a>
+       <a href="http://faq.web.archive.org/" style="background-image:url(/static/images/toolbar/wm_tb_help.png);bottom:5px;" title="Get some help using the Wayback Machine">Help</a>
+   </td>
+   </tr></tbody></table>
+</div>
+</div>
+</div>
+
+
+<!-- BEGIN WAYBACK TOOLBAR INSERT -->
+<script type="text/javascript" src="/static/js/disclaim-element.js"></script>
+<script type="text/javascript" src="/static/js/graph-calc.js"></script>
+<script type="text/javascript">//<![CDATA[
+var __wm = (function(imgWidth,imgHeight,yearImgWidth,monthImgWidth){
+var wbPrefix = "/web/";
+var wbCurrentUrl = "http://stephengoldin.com/gibson/technohick01.html";
+
+var firstYear = 1996;
+var displayDay = "17";
+var displayMonth = "Dec";
+var displayYear = "2002";
+var prettyMonths = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+var $D=document,$=function(n){return document.getElementById(n)};
+var trackerVal,curYear = -1,curMonth = -1;
+var yearTracker,monthTracker;
+function showTrackers(val) {
+  if (val===trackerVal) return;
+  var $ipp=$("wm-ipp");
+  var $y=$("displayYearEl"),$m=$("displayMonthEl"),$d=$("displayDayEl");
+  if (val) {
+    $ipp.className="hi";
+  } else {
+    $ipp.className="";
+    $y.innerHTML=displayYear;$m.innerHTML=displayMonth;$d.innerHTML=displayDay;
+  }
+  yearTracker.style.display=val?"inline":"none";
+  monthTracker.style.display=val?"inline":"none";
+  trackerVal = val;
+}
+function trackMouseMove(event,element) {
+  var eventX = getEventX(event);
+  var elementX = getElementX(element);
+  var xOff = Math.min(Math.max(0, eventX - elementX),imgWidth);
+  var monthOff = xOff % yearImgWidth;
+
+  var year = Math.floor(xOff / yearImgWidth);
+  var monthOfYear = Math.min(11,Math.floor(monthOff / monthImgWidth));
+  // 1 extra border pixel at the left edge of the year:
+  var month = (year * 12) + monthOfYear;
+  var day = monthOff % 2==1?15:1;
+  var dateString = zeroPad(year + firstYear) + zeroPad(monthOfYear+1,2) +
+    zeroPad(day,2) + "000000";
+
+  $("displayYearEl").innerHTML=year+firstYear;
+  $("displayMonthEl").innerHTML=prettyMonths[monthOfYear];
+  // looks too jarring when it changes..
+  //$("displayDayEl").innerHTML=zeroPad(day,2);
+  var url = wbPrefix + dateString + '/' +  wbCurrentUrl;
+  $("wm-graph-anchor").href=url;
+
+  if(curYear != year) {
+    var yrOff = year * yearImgWidth;
+    yearTracker.style.left = yrOff + "px";
+    curYear = year;
+  }
+  if(curMonth != month) {
+    var mtOff = year + (month * monthImgWidth) + 1;
+    monthTracker.style.left = mtOff + "px";
+    curMonth = month;
+  }
+}
+function hideToolbar() {
+  $("wm-ipp").style.display="none";
+}
+function bootstrap() {
+  var $spk=$("wm-ipp-sparkline");
+  yearTracker=$D.createElement('div');
+  yearTracker.className='yt';
+  with(yearTracker.style){
+    display='none';width=yearImgWidth+"px";height=imgHeight+"px";
+  }
+  monthTracker=$D.createElement('div');
+  monthTracker.className='mt';
+  with(monthTracker.style){
+    display='none';width=monthImgWidth+"px";height=imgHeight+"px";
+  }
+  $spk.appendChild(yearTracker);
+  $spk.appendChild(monthTracker);
+
+  var $ipp=$("wm-ipp");
+  $ipp&&disclaimElement($ipp);
+}
+return{st:showTrackers,mv:trackMouseMove,h:hideToolbar,bt:bootstrap};
+})(550, 27, 25, 2);//]]>
+</script>
+<style type="text/css">
+body {
+  margin-top:0 !important;
+  padding-top:0 !important;
+  min-width:800px !important;
+}
+</style>
+
+<script type="text/javascript">__wm.bt();</script>
+<!-- END WAYBACK TOOLBAR INSERT -->
+
+<center><font size="+2" face="Helvetica"><b>BEWARE THE TECHNOHICK
+TAKEOVER!</b></font>
+
+<p><font face="New York">by Mary Mason</font></p></center>
+
+<p><font face="New York" color="#CC0000"><b>DISCLAIMER:</b> Regarding
+the details of the engineering discussed below.</font>
+
+</p><p><font face="New York" color="#CC0000">In order to perform as Lynx
+Crowe's agent and secretary, it became necessary for me to read the
+specifications for G-WIZ projects, track the design meetings, and
+discuss the ongoing projects at some depth with Lynx. So, while not
+an engineer, I was forced to learn a great deal about the engineering
+process and considerations of all the work at G-WIZ. The engineering
+details discussed below are my best recollection of what happened
+when. Any errors in technical details, I apologize for. Since Lynx
+was prohibited from publicizing his case (as in all civil cases) he
+didn't feel it would be ethical to assist me in preparing this
+article. So all errors are mine; everything I get right about these
+projects, I learned from him and the nice young men at G-WIZ.</font>
+
+</p><h2>The Sordid and True Story of the OB-Mx</h2>
+
+<p><font face="New York">D.N. "Lynx" Crowe and Don Buchla were called
+in to salvage the OB-Mx very late in the game. They weren't told the
+whole story of the project to that date; they gradually uncovered the
+archeological and forensic evidence in the drawings and code. Some
+details still aren't known, but thanks to the process of Discovery in
+several civil suits, including depositions of many of the people
+mentioned here, enough is known to show the mismanagement, fraud, and
+incompetence that doomed G-WIZ, the OB-Mx, and ultimately OpCode and
+any other hi-tech company that is fooled into trying to work with
+Gibson Guitar and its Technohick CEO, Henry Juszkiewicz. Everything
+spelled out in this narrative is either from my own memories of the
+time, or from depositions and exhibits already in evidence in the
+case.</font>
+
+</p><p><font face="New York">Since <b>1992</b> I have functioned as Lynx
+Crowe's business agent, I was right in the middle of all the
+negotiations and meetings described; wrote, or have read all the
+correspondence between Lynx and G-WIZ, and spent a great deal of time
+at the various G-WIZ office locations and so on. During part of this
+time, from mid-1992 to late-1994, Lynx lived with my husband and me
+in our spare room. Nearly all the code for the OB-Mx and ZIPI were
+written at our house, on my Mac Plus. As you can easily guess, I
+became his de facto secretary for all G-WIZ calls. This has helped me
+put together the projects' histories.</font>
+
+</p><center><font face="New York"><table border="0">
+   <tbody><tr>
+      <td>
+         <p>
+      </p></td>
+      <td align="right">
+         <p><a href="technohick02.html"><img src="nnext.gif" alt="Next page" width="72" height="25" border="0" align="bottom"></a>
+      </p></td>
+   </tr>
+</tbody></table>
+ </font><a href="index.html"><font face="New York">Back to Summary
+Page</font></a>
+
+<p><font size="-2" face="New York">Copyright 1999 Mary Mason. All
+Rights Reserved.</font>
+
+</p><p><!-- Start of GoldStats  Web Stats Code. Do not alter this code!-->
+<script language="javascript"><!--
+	var sw="";
+	var sh="";
+	var c="";
+	var j="u";
+	var r=""+escape(top.document.referrer);
+        var p="";
+	var js="1.0";
+	var acc="mc[ilgept[obgisnsehnodn]o";
+	var tag = "<A HREF=\"/web/20021217224030/http://goldstats.com/cgi-bin/stats-bin/do/link.cgi?id=mc[ilgept[obgisnsehnodn]o\" target=_top>"+
+	"<IMG SRC=\"/web/20021217224030/http://goldstats.com/cgi-bin/stats-bin/do/stats.cgi?j=u&r="+r+
+	"&js="+js+"&id=mc[ilgept[obgisnsehnodn]o\""+" BORDER=0 target=_top></A>";
+ //--></script> <script language="javascript1.1"><!--
+	js="1.1";
+ //--></script> <script language="javascript1.2"><!--
+	sw=screen.width;
+	sh=screen.height;
+	js="1.2";
+	var v=navigator.appName;
+  	if (v != "Netscape") {
+		c=screen.colorDepth;
+	} else {
+		c=screen.pixelDepth;
+	};
+	j=navigator.javaEnabled();
+	if (v == "Netscape")  {
+	    for (i = 0; i < navigator.plugins.length; ++i) p += navigator.plugins[i].name + ';';
+	    p = escape(p);
+	}
+	if (v == "Opera")  {
+  	    for (i = 0; i < navigator.plugins.length; ++i) p += navigator.plugins[i].name + ';';
+            p = escape(p);
+  	}
+ //--></script> <script language="javascript1.3"><!--
+	js="1.3";
+ //--></script> <script language="javascript1.4"><!--
+	js="1.4%2B";
+ //--></script> <script language="" src="/web/20021217224030js_/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi"><!--
+ //--></script> <script language="javascript"><!--
+	document.write(tag); //--></script><a href="/web/20021126072121/http://goldstats.com/cgi-bin/do/link.cgi?id=mc[ilgept[obgisnsehnodn]o" target="_top"><img src="/web/20021126072121/http://goldstats.com/cgi-bin/do/stats.cgi?sw=2560&amp;sh=1440&amp;c=24&amp;j=true&amp;js=1.4%2B&amp;p=WebKit%20built-in%20PDF%3B&amp;r=http%3A//web.archive.org/web/20030101040103/http%3A//stephengoldin.com/gibson/technohick02.html&amp;id=mc[ilgept[obgisnsehnodn]o&amp;tt=1038294912" border="0"></a>  <!-- End of GoldStats  Web Stats Code --></p></center>
+
+
+
+
+
+
+
+<!--
+     FILE ARCHIVED ON 22:40:30 Dec 17, 2002 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 20:25:02 Jan 28, 2017.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->
+</body></html>Ytext/htmlUUTF-8P_[http://web.archive.org/web/20021217224030/http://stephengoldin.com/gibson/technohick01.htmlª#'+05:Ô_WebResourceResponseOÑbplist00ÔrsX$versionX$objectsY$archiverT$top † ¯$#)*0123QRSTUVWXYZ[\]^_`abcdefghilmU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €#€€"€Ó$%'(WNS.base[NS.relative€ €€_-http://web.archive.org/static/js/analytics.jsÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®åì ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬DEFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-Modified_application/javascript]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":1}_Sat, 28 Jan 2017 18:28:58 GMTT1569Q0Zkeep-alive_W/"1569-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/_application/javascriptÒ+,no_NSHTTPURLResponse£pq/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑtu_WebResourceResponse€    # - 2 7 ^ d  ‚ † ‰ Œ  “ –    £ ¦ © ¬ ® ° ² ´ ¶ · ¹ » ½ ¿ Á Ã Å Ì Ô à â ä æ&/58AJLNU]huwy{}ƒ…‡‰‹šœ ¢¤¦¨ª¬®°²´ÁÈÍÚóø',:Haoª®ºÚßáì+0=@Y^rvŠ˜ª­Ã             v              ÅO!var archive_analytics = {
+    startTime: new Date(),
+    img_src: "//analytics.archive.org/0.gif",
+    values: { service: 'wb' },
+    
+    onload_func: function() {
+	var now = new Date();
+	var loadtime = now - archive_analytics.startTime;
+
+	var v = archive_analytics.values;
+	v.loadtime = loadtime;
+	v.timediff = -(now.getTimezoneOffset()/60);
+	v.locale = archive_analytics.get_locale();
+	// if no referrer set '-' as referrer
+	v.referrer = document.referrer || '-';
+
+        var string = archive_analytics.format_bug(v);
+        var loadtime_img = new Image(100,25);
+        loadtime_img.src = archive_analytics.img_src + "?" + string;
+    },
+    format_bug: function(values) {
+        var ret = ['version=2'], count = 2;
+        
+        for (var data in values) {
+            ret.push(encodeURIComponent(data) + "=" + encodeURIComponent(values[data]));
+            count = count + 1;
+        }
+        ret.push('count=' + count);
+        return ret.join("&");
+    },
+    get_locale: function() {
+        if (navigator) {
+	    return navigator.language || navigator.browserLanguage ||
+		navigator.systemLanguage || navigator.userLanguage || '';
+        }
+        return '';
+    },
+    get_cookie: function(name) {
+      var parts = document.cookie.split(name + "=");
+      if (parts.length == 2) return parts.pop().split(";").shift();
+      return 0;
+    }
+};
+
+if (window.addEventListener) {
+    window.addEventListener('load', archive_analytics.onload_func, false);
+} else if (window.attachEvent) {
+    window.attachEvent('onload', archive_analytics.onload_func);
+}
+_application/javascript_-http://web.archive.org/static/js/analytics.jsÔO­bplist00ÔqrX$versionX$objectsY$archiverT$top † ¯##)*0123QRSTUVWXYZ[\]^_`abcdefghilU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €"€€€Ó$%'(WNS.base[NS.relative€ €€_3http://web.archive.org/static/css/banner-styles.cssÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®å$ ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬EFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-ModifiedXtext/css]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":0}_Sat, 28 Jan 2017 18:28:58 GMTU10587Q0Zkeep-alive_W/"10587-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/Ò+,mn_NSHTTPURLResponse£op/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑst_WebResourceResponse€    # - 2 7 ] c ~  … ˆ ‹  ’ • œ Ÿ ¢ ¥ ¨ « ­ ¯ ± ³ µ ¶ ¸ º ¼ ¾ À Â Ä Ë Ó ß á ã å +4:=FOQSZbmz|~€‚„†ˆŠŒ’Ÿ¡£¥§©«­¯±³µ·¹ÆÍÒßøı!,1?MVdŸ£¯ÏÕ×âü"'47<PThvˆ‹¡             u              £O)[  .__wb_overlay {
+    filter:alpha(opacity=60); /* IE */
+    opacity: 0.6; /* Safari, Opera */
+    -moz-opacity:0.6; /* FireFox */  
+    opacity: 0.6;
+    
+    background-color: #000;
+    position: fixed;
+    width:100%;
+    height:100%;
+    top: 0px;
+    left: 0px;
+    padding: 0px !important;
+    border: 0px !important;
+    margin: 0px !important;
+    border-radius: 0px !important;
+    z-index: 2147483643 !important;
+  }
+  
+  #__wb_record_overlay_div {
+    cursor: wait !important;
+  }
+  
+
+
+  .__wb_record_content {
+    opacity: 1.0;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    margin: 0px !important;
+    padding: 0px !important;
+
+    background-color: #ffffff !important;
+    border-radius: 8px;
+    z-index: 2147483644 !important;
+    box-shadow: 0 0 30px 5px #000;
+    -moz-box-shadow: 0 0 30px 5px #000;    
+    -webkit-box-shadow: 0 0 30px 5px #000;  
+  }
+    
+  #__wb_record_content_loader {
+    cursor: wait !important;
+    padding-top: 30px !important;    
+    margin-left: -287px !important;
+    margin-top: -177px !important;    
+    width: 574px !important;
+    height: 355px !important;  
+  }
+  
+  #__wb_record_content_done {
+    margin-left: -427px !important;
+    margin-top: -177px !important;      
+    width: 855px !important;
+    height: 355px !important;  
+  }
+  
+  .__wb_record_content > * {
+    margin: auto !important;
+    display: block !important;
+
+    text-align: center !important;
+    font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif !important;
+  }
+  
+  .__wb_record_content > wb_h1 {
+    font-size: 36px !important;
+    color: #222 !important;
+    margin: 0px 0px 0px 0px !important;
+    padding: 0px !important;
+    line-height: 2em;
+    font-weight: normal !important;
+    width: auto !important;
+    height: auto !important;    
+  }   
+  
+  .__wb_record_content > wb_p {
+    font-size: 17px !important;
+    color: #222 !important;    
+    margin: 8px 0px 8px 0px !important;
+    padding: 0px !important;
+    line-height: 2em;
+  }  
+  
+  .__wb_record_content > #_wb_logo  {
+    margin-bottom: 10px !important;
+  }
+  
+  .__wb_record_content > #_wb_spinner {
+    margin-top: 30px !important;
+    margin-bottom: 30px !important;    
+  }
+  
+  .__wb_record_content > #_wb_curr_url {
+    text-decoration: underline !important;
+    font-weight: bold !important;
+  }
+  
+  #__wb_record_content_done > #__wb_link {
+    font-size: 20px !important;
+    border: 1px !important;
+    border-color: #aaa !important;
+    border-style: solid !important;
+    padding: 3px !important;
+    text-align: center !important;
+    width: 80% !important;
+    height: auto !important;
+  }
+ 
+  #__wb_record_content_done > #__wb_link:focus {
+    outline: 0px !important;
+    border-color: #428bca !important;
+  }
+  
+  /* DONATE */
+  
+  #__wb_record_content_done > #__wb_donate_close {
+    font-size: 18px !important;
+    width: auto !important;
+    float: right;
+    display: inline-block;
+    margin: 0px !important;
+    padding: 8px 8px 0px 0px !important;   
+  }
+  
+  #__wb_donate_close > #__wb_record_done_close {
+    cursor: pointer !important;
+    display: inline-block;
+    vertical-align: bottom !important;
+  }
+  
+  #__wb_record_content_done > #__wb_donate_close a {
+    color: #428bca !important;
+  } 
+  
+  #__wb_record_content_done > #__wb_donate_close a:link {
+    color: #428bca !important;
+    text-decoration: none !important;
+    margin-right: 16px !important;
+  }
+  
+  #__wb_record_content_done > #__wb_donate_close a:visited {
+    color: #428bca !important;
+  } 
+  
+  #__wb_record_content_done > #__wb_donate_close a:hover {
+    color: #00B1F7 !important;
+  }
+
+#wm-ipp {
+  width:100%;
+  min-height:65px;
+  min-width:800px;
+  left:0;
+  top:0;
+  padding:0;
+  margin:0;
+  border-radius:0;
+  background-color:transparent;
+  font-size:11px;
+}
+#wm-ipp * {
+  font-family:Lucida Grande, Helvetica, Arial, sans-serif;
+  font-size:inherit;
+  line-height:1.2;
+  width:auto;
+  outline:none;
+  float:none;
+}
+#wm-ipp div, #wm-ipp tr, #wm-ipp td, #wm-ipp a, #wm-ipp form {
+  padding:0;
+  margin:0;
+  border:none;
+  border-radius:inherit;
+  background-color:transparent;
+  background-image:none;
+  z-index:2147483640;
+}
+#wm-ipp table {
+  border:none;
+  border-collapse:collapse;
+  margin:0;
+  padding:0;
+  width:auto;
+  font-size:inherit;
+}
+#wm-ipp form input {
+  padding:1px;
+  height:auto;
+  display:inline;
+  margin:0;
+}
+#wm-ipp form input[type=submit] {
+  padding:0 8px;
+  margin:1px 0 1px 5px;
+  width:auto !important;
+}
+#wm-ipp a:hover{
+  text-decoration:underline !important;
+}
+#wm-ipp #wm-ipp-inside {
+  width:98% !important;
+  min-width:780px;
+  margin: 0 auto;
+  border:5px solid #000;
+  border-top:none;
+  background-color:rgba(255,255,255,0.9);
+  -moz-box-shadow:1px 1px 4px #333;
+  -webkit-box-shadow:1px 1px 4px #333;
+  box-shadow:1px 1px 4px #333;
+  border-radius:0 0 8px 8px;
+}
+/* selectors are intentionally verbose to ensure priority */
+#wm-ipp #wm-logo {
+  padding:0 10px;
+  vertical-align:middle;
+  min-width:110px;
+}
+#wm-ipp td.c {
+  vertical-align:top;
+  width:100%;
+}
+#wm-ipp td.c td.u {
+  padding: 3px 0;
+  text-align:center;
+}
+#wm-ipp td.c td.n {
+  padding-left:5px;
+}
+#wm-ipp td.c td.n a {
+  text-decoration:none;
+  color:#33f;
+  font-weight:bold;
+}
+#wm-ipp td.c td.n td.b {
+  padding-right:6px !important;
+  text-align:right !important;
+  overflow:visible;
+  white-space:nowrap;
+  color:#99a;
+  vertical-align:middle;
+}
+#wm-ipp td.c td.n td.c {
+  background:#000;
+  color:#ff0;
+  font-weight:bold;
+  text-align:center;
+}
+#wm-ipp.hi td.c td.n td.c {
+  color:#ec008c;
+}
+#wm-ipp td.c td.n td.f {
+  padding-left:6px !important;
+  text-align:left !important;
+  overflow:visible;
+  white-space:nowrap;
+  color:#99a;
+  vertical-align:middle;
+}
+#wm-ipp td.c td.n tr.m td {
+  text-transform:uppercase;
+  white-space:nowrap;
+  padding:2px 0;
+}
+#wm-ipp td.c td.s {
+  padding-right:5px;
+  text-align:center;
+  vertical-align:bottom;
+}
+#wm-ipp td.c td.s a.t {
+  color:#33f;
+  font-weight:bold;
+  line-height: 1.8;
+}
+#wm-ipp td.c td.s div.r {
+  color: #666;
+  font-size:9px;
+  white-space:nowrap;
+}
+#wm-ipp td.c td.k {
+  vertical-align:bottom;
+  padding-bottom:2px;
+}
+#wm-ipp td.c td.n tr.y td, #wm-ipp td.c td.s {
+  padding-bottom:2px;
+}
+
+div#wm-ipp-sparkline {
+  position:relative;/* for positioning markers */
+  white-space:nowrap;
+  background-color:#fff;
+  cursor:pointer;
+  border-right:1px solid #ccc;
+  line-height:0.9;
+}
+#sparklineImgId {
+  position:relative;
+  z-index:9012;
+}
+#wm-ipp-sparkline div.yt {
+  position:absolute;
+  z-index:9010 !important;
+  background-color:#ff0 !important;
+}
+#wm-ipp-sparkline div.mt {
+  position:absolute;
+  z-index:9011 !important;
+  background-color:#ec008c !important;
+}  
+#wm-ipp td.r {
+  position:relative;
+  padding-left:65px;/* to push td.c to the left */
+}
+#wm-ipp td.r a {
+  display:block;
+  padding:0 15px 0 0;
+  color:#33f;
+  border:none;
+  position:absolute;
+  right:5px;
+  background-color:transparent;
+  background-repeat:no-repeat !important;
+  background-position:100% 100% !important;
+}
+/* Spinner */
+#__wb_spinningSquaresG{        
+  position: relative;
+  width: 240px;
+  height: 20px;
+  
+ 
+  padding: 0px !important;
+  margin: 30px 0px 30px 160px !important;
+  border: 0px !important;
+  border-radius: 0px !important;
+}
+
+.__wb_spinningSquaresG {
+   
+      
+  margin: 0px !important;
+  padding: 0px !important;
+  border: 0px !important;
+  border-radius: 0px !important;
+    
+position:absolute;
+top:0;
+background-color:#000000;
+width:22px;
+height:22px;
+-moz-animation-name:bounce_spinningSquaresG;
+-moz-animation-duration:1.9s;
+-moz-animation-iteration-count:infinite;
+-moz-animation-direction:linear;
+-moz-transform:scale(.3);
+-webkit-animation-name:bounce_spinningSquaresG;
+-webkit-animation-duration:1.9s;
+-webkit-animation-iteration-count:infinite;
+-webkit-animation-direction:linear;
+-webkit-transform:scale(.3);
+-ms-animation-name:bounce_spinningSquaresG;
+-ms-animation-duration:1.9s;
+-ms-animation-iteration-count:infinite;
+-ms-animation-direction:linear;
+-ms-transform:scale(.3);
+-o-animation-name:bounce_spinningSquaresG;
+-o-animation-duration:1.9s;
+-o-animation-iteration-count:infinite;
+-o-animation-direction:linear;
+-o-transform:scale(.3);
+animation-name:bounce_spinningSquaresG;
+animation-duration:1.9s;
+animation-iteration-count:infinite;
+animation-direction:linear;
+transform:scale(.3);
+}
+
+#__wb_spinningSquaresG_1{
+left:0;
+-moz-animation-delay:0.76s;
+-webkit-animation-delay:0.76s;
+-ms-animation-delay:0.76s;
+-o-animation-delay:0.76s;
+animation-delay:0.76s;
+}
+
+#__wb_spinningSquaresG_2{
+left:30px;
+-moz-animation-delay:0.95s;
+-webkit-animation-delay:0.95s;
+-ms-animation-delay:0.95s;
+-o-animation-delay:0.95s;
+animation-delay:0.95s;
+}
+
+#__wb_spinningSquaresG_3{
+left:60px;
+-moz-animation-delay:1.14s;
+-webkit-animation-delay:1.14s;
+-ms-animation-delay:1.14s;
+-o-animation-delay:1.14s;
+animation-delay:1.14s;
+}
+
+#__wb_spinningSquaresG_4{
+left:90px;
+-moz-animation-delay:1.33s;
+-webkit-animation-delay:1.33s;
+-ms-animation-delay:1.33s;
+-o-animation-delay:1.33s;
+animation-delay:1.33s;
+}
+
+#__wb_spinningSquaresG_5{
+left:120px;
+-moz-animation-delay:1.52s;
+-webkit-animation-delay:1.52s;
+-ms-animation-delay:1.52s;
+-o-animation-delay:1.52s;
+animation-delay:1.52s;
+}
+
+#__wb_spinningSquaresG_6{
+left:150px;
+-moz-animation-delay:1.71s;
+-webkit-animation-delay:1.71s;
+-ms-animation-delay:1.71s;
+-o-animation-delay:1.71s;
+animation-delay:1.71s;
+}
+
+#__wb_spinningSquaresG_7{
+left:180px;
+-moz-animation-delay:1.9s;
+-webkit-animation-delay:1.9s;
+-ms-animation-delay:1.9s;
+-o-animation-delay:1.9s;
+animation-delay:1.9s;
+}
+
+#__wb_spinningSquaresG_8{
+left:210px;
+-moz-animation-delay:2.09s;
+-webkit-animation-delay:2.09s;
+-ms-animation-delay:2.09s;
+-o-animation-delay:2.09s;
+animation-delay:2.09s;
+}
+
+@-moz-keyframes bounce_spinningSquaresG{
+0%{
+-moz-transform:scale(1);
+background-color:#000000;
+}
+
+100%{
+-moz-transform:scale(.3) rotate(90deg);
+background-color:#FFFFFF;
+}
+
+}
+
+@-webkit-keyframes bounce_spinningSquaresG{
+0%{
+-webkit-transform:scale(1);
+background-color:#000000;
+}
+
+100%{
+-webkit-transform:scale(.3) rotate(90deg);
+background-color:#FFFFFF;
+}
+
+}
+
+@-ms-keyframes bounce_spinningSquaresG{
+0%{
+-ms-transform:scale(1);
+background-color:#000000;
+}
+
+100%{
+-ms-transform:scale(.3) rotate(90deg);
+background-color:#FFFFFF;
+}
+
+}
+
+@-o-keyframes bounce_spinningSquaresG{
+0%{
+-o-transform:scale(1);
+background-color:#000000;
+}
+
+100%{
+-o-transform:scale(.3) rotate(90deg);
+background-color:#FFFFFF;
+}
+
+}
+
+@keyframes bounce_spinningSquaresG{
+0%{
+transform:scale(1);
+background-color:#000000;
+}
+
+100%{
+transform:scale(.3) rotate(90deg);
+background-color:#FFFFFF;
+}
+
+}
+
+Xtext/css_3http://web.archive.org/static/css/banner-styles.cssÔO¾bplist00ÔqrX$versionX$objectsY$archiverT$top † ¯##)*0123QRSTUVWXYZ[\]^_`abcdefghilU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €"€€€Ó$%'(WNS.base[NS.relative€ €€_Ehttp://web.archive.org/static/images/toolbar/wayback-toolbar-logo.pngÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®å. ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬EFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-ModifiedYimage/png]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":6}_Sat, 28 Jan 2017 19:40:18 GMTT7564Q0Zkeep-alive_W/"7564-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/Ò+,mn_NSHTTPURLResponse£op/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑst_WebResourceResponse€    # - 2 7 ] c ~  … ˆ ‹  ’ • œ Ÿ ¢ ¥ ¨ « ­ ¯ ± ³ µ ¶ ¸ º ¼ ¾ À Â Ä Ë Ó ß á ã å-2=FLOXaceltŒ’”–˜šœ ¢¤±³µ·¹»½¿ÁÃÅÇÉËØßäñ
+3>CQ_iw²¶Ââçéô38EHMaey‡™œ²             u              ´OŒ‰PNG
+
+   IHDR   n   '   anê   	pHYs     šœ  
+OiCCPPhotoshop ICC profile  xÚSgTSé=÷ŞôBKˆ€”KoR RB‹€‘&*!	Jˆ!¡ÙQÁEEÈ ˆ€ŒQ,Š
+Øä!¢ƒ£ˆŠÊûá{£kÖ¼÷æÍşµ×>ç¬ó³ÏÀ–H3Q5€©BàƒÇÄÆáä.@
+$p ³d!sı# ø~<<+"À¾ xÓ ÀM›À0‡ÿêB™\€„Àt‘8K€ @zB¦ @F€˜&S   `Ëcbã P- `'æÓ €ø™{ [”! ‘  eˆD h; ¬ÏVŠE X0 fKÄ9 Ø- 0IWfH °· ÀÎ²  0Qˆ…) { `È##x „™ FòW<ñ+®ç*  x™²<¹$9E[-qWW.(ÎI+6aaš@.Ây™24àóÌ   ‘àƒóıxÎ®ÎÎ6¶_-ê¿ÿ"bbãşåÏ«p@  át~Ñş,/³€;€mş¢%îh^ u÷‹f²@µ  éÚWópø~<<E¡¹ÙÙåääØJÄB[aÊW}şgÂ_ÀWılù~<ü÷õà¾â$2]GøàÂÌôL¥Ï’	„bÜæGü·ÿüÓ"ÄIb¹X*ãQqDšŒó2¥"‰B’)Å%Òÿdâß,û>ß5 °j>{‘-¨]cöK'XtÀâ÷  ò»oÁÔ(€hƒáÏwÿï?ıG % €fI’q  ^D$.TÊ³?Ç  D *°AôÁ,ÀÁÜÁü`6„B$ÄÂBB
+d€r`)¬‚B(†Í°*`/Ô@4ÀQh†“p.ÂU¸=púaÁ(¼	AÈa!ÚˆbŠX#™…ø!ÁH‹$ ÉˆQ"K‘5H1RŠT UHò=r9‡\Fº‘;È 2‚ü†¼G1”²Q=ÔµC¹¨7„F¢Ğdt1š ›Ğr´=Œ6¡çĞ«hÚ>CÇ0Àè3Äl0.ÆÃB±8,	“cË±"¬«Æ°V¬»‰õcÏ±wEÀ	6wB aAHXLXNØH¨ $4Ú	7	„QÂ'"“¨K´&ºùÄb21‡XH,#Ö/{ˆCÄ7$‰C2'¹I±¤TÒÒFÒnR#é,©›4H#“ÉÚdk²9”, +È…ääÃä3ää!ò[
+b@q¤øSâ(RÊjJåå4åe˜2AU£šRİ¨¡T5ZB­¡¶R¯Q‡¨4uš9ÍƒIK¥­¢•Óhh÷i¯ètºİ•N—ĞWÒËéGè—èôw†ƒÇˆg(›gw¯˜L¦Ó‹ÇT071ë˜ç™™oUX*¶*|‘Ê
+•J•&•*/T©ª¦ªŞªUóUËT©^S}®FU3Sã©	Ô–«UªPëSSg©;¨‡ªg¨oT?¤~Yı‰YÃLÃOC¤Q ±_ã¼Æ c³x,!k«†u5Ä&±ÍÙ|v*»˜ı»‹=ª©¡9C3J3W³Ró”f?ã˜qøœtN	ç(§—ó~ŠŞï)â)¦4L¹1e\kª–—–X«H«Q«Gë½6®í§¦½E»YûAÇJ'\'GgÎçSÙSİ§
+§M=:õ®.ªk¥¡»Dw¿n§î˜¾^€Lo§Şy½çú}/ıTımú§õGX³$ÛÎ<Å5qo</ÇÛñQC]Ã@C¥a•a—á„‘¹Ñ<£ÕFFŒiÆ\ã$ãmÆmÆ£&&!&KMêMîšRM¹¦)¦;L;LÇÍÌÍ¢ÍÖ™5›=1×2ç›ç›×›ß·`ZxZ,¶¨¶¸eI²äZ¦Yî¶¼n…Z9Y¥XUZ]³F­­%Ö»­»§§¹N“N«ÖgÃ°ñ¶É¶©·°åØÛ®¶m¶}agbg·Å®Ãî“½“}º}ı=‡Ù«Z~s´r:V:ŞšÎœî?}Åô–é/gXÏÏØ3ã¶Ë)ÄiS›ÓGgg¹sƒóˆ‹‰K‚Ë.—>.›ÆİÈ½äJtõq]ázÒõ›³›Âí¨Û¯î6îiî‡ÜŸÌ4Ÿ)Y3sĞÃÈCàQåÑ?Ÿ•0kß¬~OCOgµç#/c/‘W­×°·¥wª÷aï>ö>rŸã>ã<7Ş2ŞY_Ì7À·È·ËOÃo_…ßC#ÿdÿzÿÑ §€%g‰A[ûøz|!¿?:Ûeö²ÙíAŒ ¹AA‚­‚åÁ­!hÈì­!÷ç˜Î‘Îi…P~èÖĞaæa‹Ã~'…‡…W†?pˆXÑ1—5wÑÜCsßDúD–DŞ›g1O9¯-J5*>ª.j<Ú7º4º?Æ.fYÌÕXXIlK9.*®6nl¾ßüíó‡ââã{˜/È]py¡ÎÂô…§©.,:–@LˆN8”ğA*¨Œ%òw%
+yÂÂg"/Ñ6ÑˆØC\*NòH*Mz’ì‘¼5y$Å3¥,å¹„'©¼LLİ›:šv m2=:½1ƒ’‘qBª!M“¶gêgæfvË¬e…²şÅn‹·/•Ék³¬Y-
+¶B¦èTZ(×*²geWf¿Í‰Ê9–«+ÍíÌ³ÊÛ7œïŸÿíÂá’¶¥†KW-Xæ½¬j9²<qyÛ
+ã+†V¬<¸Š¶*mÕO«íW—®~½&zMk^ÁÊ‚ÁµkëU
+å…}ëÜ×í]OX/Yßµaú†>‰Š®Û—Ø(Üxå‡oÊ¿™Ü”´©«Ä¹dÏfÒféæŞ-[–ª—æ—nÙÚ´ßV´íõöEÛ/—Í(Û»ƒ¶C¹£¿<¸¼e§ÉÎÍ;?T¤TôTúT6îÒİµa×ønÑî{¼ö4ìÕÛ[¼÷ı>É¾ÛUUMÕfÕeûIû³÷?®‰ªéø–ûm]­NmqíÇÒı#¶×¹ÔÕÒ=TRÖ+ëGÇ¾şïw-6UœÆâ#pDyäé÷	ß÷:ÚvŒ{¬áÓvg/jBšòšF›Sšû[b[ºOÌ>ÑÖêŞzüGÛœ4<YyJóTÉiÚé‚Ó“gòÏŒ•}~.ùÜ`Û¢¶{çcÎßjoïºtáÒEÿ‹ç;¼;Î\ò¸tò²ÛåW¸Wš¯:_mêtê<ş“ÓOÇ»œ»š®¹\k¹îz½µ{f÷é7Îİô½yñÿÖÕ9=İ½ózo÷Å÷õßİ~r'ıÎË»Ùw'î­¼O¼_ô@íAÙCİ‡Õ?[şÜØïÜjÀw óÑÜG÷…ƒÏş‘õC™Ë††ë8>99â?rıéü§CÏdÏ&ş¢şË®/~øÕë×ÎÑ˜Ñ¡—ò—“¿m|¥ıêÀë¯ÛÆÂÆ¾Éx31^ôVûíÁwÜwï£ßOä| (ÿhù±õSĞ§û“““ÿ˜óüc3-Û    cHRM  z%  €ƒ  ùÿ  €é  u0  ê`  :˜  o’_ÅF  ·IDATxÚìZ{tTÕ¹ÿö>y'“	3dBäIò€DXy¸Ä[±ëUzÑØ‹º¸µ×Z/EmÑEK½•”—½-,Ğ«^ZBx$@H„ Á$fbŞ“É¼ÎÌ9gïûÇ–1@J°í]—ı×œ=çìÇoß÷íQJán»ß…àN5şšgY–kã8®°¨ˆçùv‡ãâÅ‹…EE&“é³K—bbcµZíàààÉº:­VGTU£Õ@C}}ÿ€(
+Z.//!ÔÕÕu¾±QUI„Ùœ—?! õõõ·»¸¤$8ÚÚRRS »»û|c£ Š¢æMÉ3™L^¯÷d]Æ˜*ˆBaQÆ#œúñãÇ-KJJ
+{”$©ººÚår¥¦¦fgg‡^kkk;~üxLLÌ´iÓ @UÕƒ?Şn·744L™2…ã8 8yòdOOÏÌ™3u:Ïç;räHAAÅbiii±ÙlF£Q’¤#Gx<Jé< ÓéF‘Ê­›·ìØ¾ƒı¦ ?ı÷Ÿ,_¶ ¶lŞÜ×× ]½½½›Ş~ûã?nşì3Ç ‡~õgËM&Ó§@€Êk¯¼24äÚ¸aÃÖM›Ù€íÇ÷™¨ò Ïë}{ãFÖ©*Êk¯¼Ú××70ĞßÓİ N§³¯·ïwkÖ:x°»«Ûçõ(¿ıíoËËËC¡Õ«W744üâ¿8qâëìíí-//Ü¹s§Óédï½÷Ş;úúú–,YâóùXguuõŠ+Ø‘#„Ö¬Y³eË X¿~}0dïlÜ¸±¦¦¦½½=4Ô_…R„ä”äôôtç ::ºìûµ}şyå&22Ê{,***33³ìûß7¡ÄÄD^×ÕÕššªÑh Àn·GGGGFFF‰„Øø©©iOş`Ñúßı®««Ûh4²Î(»=::ÚãñƒÁ(» âããytş¸˜˜´	é÷;†+oo>Ÿ/..ã¸¶¶6Ö£ÑhRRRâãã1Æ’$±ÎÚÚÚ°°°òòò×^{ÉÇqyyyıııçÏŸ×jµ!yOLL,((Ğjµ  Óé–.]ZYYÙØØ8nÜ8‹Å Z­6++Ëb±ÄÇÇ³Q¤RUUUUÙï@ öüÒ[·fÍ@?S„Ğk², [Šªªª¢¸İC<Ï³ƒ%„ „W¾şFÇOş`ûÊãñ—”Mºú­ßğ?|F¯ÛDQ>tå$†·sçÎy<£ÑXYY9\V­Z…1¾÷Ş{C[`ba4ëT¥···¹¹™|øÆ ??ŸRúÎ;ï”””„:Eikk¼Şà\ûL)u¹\®ÁAæÙ)¥ƒƒƒ%÷”¤¤¦şi÷nBoúışØ3;Åü¼‡¢Ün÷—Xƒ/şô%—ËuøĞ¡+ËU<nÏâ§ÊÏŸ;×ÚÚšT’¤)ù3fÌhw8şÚ×¬³¦¦föìÙ,øàƒ!¬ßívWTTôôô\¸põäää\¸p¡®®®¥¥Å{ÅPø|¾¬¬¬ÒÒÒ@ ‚Ïãñttt„†2IIIû÷ïÏÊÊ
+Íëõz'MšTXXè÷û¯Y·|ùòáÏ„G›Ãh0äL„1¦”ªªš‘™Éó\ÁÔÂÔH))9)666´7¯×Ûïìw8Úr&M­xúŒ	‰	}}}™™™ À<U\||l\ÜØ±c³²³™Ğ¹‡úÎ–æf»İnµÙBÇ“œšs=”„·Û=sæÌôôt—Ë•Ífôz½ÅÅÅv»!”  ‘‘‘6›íÀN§sâÄ‰lıÁ`Ğf³±‘‹ŠŠ˜Ø~şùç’$…ö™‘‘1iÒ¤Ğ¼Á`°¥¥¥µµ577÷·ƒîòÊ»¼òWşã4T=ŸÔ«1B´Á9¢{®RLIÿí›Vp@ ğ-ˆÀåŞ÷İ<{(¡8ï?şDmè¯ööö_ÿú×UUU”RN'Ër0LOO_ºti~~şÍ.Ëò©S§!¹¹¹Œºİy©¤ªìª?ãòšÆÄhÃmÎæOD}xDL†³å´ªÊ†ñ1±ãorè®îÙó£€
+t\TÌ·#§f}­SÆ²	KÑÈ×˜|EGdù…^Ø±cGAA¢(G7n\ZZÚöíÛÏœ9søğaÛ¯uƒær¹ÊÊÊ@MMMÈsÀĞĞN§cìv¡ø¥ƒ/<%Õ_{¶ùù~¶ÒGŸ[vqÕÆ`w}ÒO*
+ŸÅİv©¯®60`Ğ'˜¬S&ë-c›ê•sg¼º°1ñ‰Ö‹Š¬rgô~úiıªxãxP/iÚöûéüOë”œ¯cÉ`yÓÓÒªÅ’á?uê lÛ¶­®®îñÇŸ;wîºuëòòòZ[[m6[UUÕşıûEQ|à&OÌØeSSBhÂ„	ÇQJeY–$i8jG-++{şùç+**º»»­Vkgg§,ËÌw>|¸¹¹9..núôéz½~4©PUjQ¨Jü ¤PÚ¡ê<Tˆ¦Aæ±Ôí9XöŒ§©IQÆš¶È’o}{ófÇOÏıô?46.åÙeŸ­İ(ñiÁŠWE³YÔë„Èî¨y…½«RGC÷Ö)9 Açşê`[2ÚÂ§e˜S&_Ñ:põ´‚ğèXøŠ’S¬Ó{NÔV=ıtÎ_û¢mÎ|FªyW…ÑfãØŞ´Zí¾}ûzè!¼®Zµj×®]“'O~ôÑG=J)={öæÍ›EQÄëõúŞŞŞ'NX­Ö¢¢¢ØØØÅ‹—””¬^½ú7ŞHOO¿xñ"¥ô­·ŞZ¸páË/¿üæ›oŠ¢(Ëò‚Ö®]k¼:ÁT#Œ¦c„0Âa„ #DX£wìùËĞÙ!mºyr˜÷Ttÿ¡ª®İòáFU—ÇC'ÑPÕ˜¦¢ËˆJ zJ©ÈiÌçôÔìƒ® Ë@üÇ—ü°ù«$ˆ§±i&ıèõ”'¾ãiê<ù³ı-€Hdlráke¼=.t¼dÂ‡©8MÑ~Ÿ„Ü#¿ŒZBvîÜ6mÚ$IÒ3Ï<óşûï777ïß¿ÿÙgŸEñW¿úÕÖ­[/^Ìó|ooïƒ>ØŞŞn0>øàƒâââììlÂp7oŞ¼-[¶ìÚµkÆŒÛ¶m³Z­Û·o_¶lÙ»ï¾»hÑ¢3fÜ"Xq:„DCìS%ÈÂ#Ê)Á3€8„TÀ€ !D¦€pHÌIPB/jÚ.µTVrhŠ1i¦Ñ>IîŒn^ÿKõ²·~İÛíú·9q‹ÿ‹ÿ\ûú[A¿‡âT„FS4ê	a±VFFÆÄ‰Ïïéé€yóæÍŸ? :;;	!c·Û=kÖ¬ââb¯×[SSÓĞĞPZZº}ûv&nåååË–-Óét„Y,–ÜÜ\f[].×íòJ¤ò  "%ª„¤à¦X ïil£Ş\‚.¦.º/j¢b
+Ş~Ïç›/sœ~ìl­4óQşsg”şNàn…ß°D$I,£1f<Éçó±À‘=*Š¾råÊ'xbø‡‚ 0ag#`ŒB!Œ±¢(¡Xvôü&°¼"lt˜}½Y®XÄH Tí×˜MH;¨Š8ŒÆ~¥&Å´© ô2AãdYf1øˆJéÍ“Å¿y´ƒ>U	Põ«N¶¢K. ú¦×B¯´»ãÿùœ!p7rÛPR¢2uÉƒ”|3
+ˆ0 w;Ú}…e„ix~÷ï–ÎPîøÇˆ¸¯@Ğk=Án¢*__¤DUB)	G¤ú.+Õ=# ‚èM¨sÜ²,_ïdA0ìÊáï%Uc¼ÕoP}u]D!_KZAñpä"ÕÊX1á¯F™bU?!Q³À¨1Ì¡¢%ä—0‡P"»9"ŒÊ+ËËËóóó³²²NŸ>=ü/¿ß?kÖ¬êêj»İoÍÛ0bt DO½´áõŸ÷ŸşØëõa÷Ê¦‰ˆp#Ø$ „‚{Âşğ_ ğÆäq={× pÃ;}2áÑ' 0ä&²€@@.W0¨Bø¤ˆØÜiåFê©(Êœ9sæÌ™ Ã¯‰ÊZ­6'' ®¿/¼»Áqœ(ŠÃ/¸nJN£ïØw²aİ.Gaƒ¦£Q5hî;ØDz|Æ’iÉ¥Os«uzô—f—ô oh/˜;„Î³û€d[ã5‘a~¿÷FZÆó’$íÜ¹³£££±±ñ¯Æ[h¢(:E‹UUU±3»½Ô/å\MÇ±ªÓ%GÅ”e¶nh¤~zCBÉÖ¹»×jdG—÷lµhØ±_ÏGÛ¨lq^ˆãDà‹áG?\—  8¬ô#¢øy¾u÷öñdêŠï½ÁŒfÃ†Ï=÷ ˜L¦áP2,Ö¯_?sæÌ¼¼¼[Pí@ ĞÜÜ<~üø´´4«Õz›Yt„ õ#›A˜ú³pckI':qc|h?İR_71£äÄÓÿ"÷ÇQz‰×Ç¡«CC¤”îş@oèÂ‘ÅŠG®ği`É¼¯ı÷•”‹xÇ–Ó­­­€-[¶˜ÍæÒÒÒĞ¢(ŠçÏŸ_±b…ßï/((øºÒöìÙu§x%@@)*×¹Sö(A¼¶'îSÑ€'"?øYŸ,8]DÌì©†•‡Bk@AWÿÎoöŞÿ`í??$_î@‚HˆÁ§OOÆ¨	 Xî2bKKK‹ˆˆ¸ÆØ1ëy}ªñæ“ÇŞ½{G¯Î¸‰ä  bN£¹úk(ÀaTtµ[ÖĞ@ ( ~ ØŒp¦ª6Ä<|Ÿ-)EU|Wçğ^.Ì'ç!€h€‘@‘”«Ôhf¹^Vñ0‚ø`|k”e4–/_>wîÜcÇİ”ô*k5ü¨ª!8›Òæêüc%u„0¨‚XQ":÷ÔR']›¿rÑƒf·=‚”Ğk°Àa!L¿²›è%hxÙË
+³›ëÛ	º™ZPJCvãF¶’ª<  ¤`¤^Rùr?D²§z—·‹H»:0—.{ıê`Ğ6Å®Ñ:üÎhù°kõ_m!P%ÚÛ~ˆ|Å¶R@ î«´¡€9ê¥Ô©Á”Ï ¼€ÜÂnp¢(2()¥¬t`ëÖ­,½ÆŠŠ®!Äœ2K¿_Ï„TUEñ<ÏĞ¼ŞÔğ×y@=î[­Ÿ–š|ƒãX«¸ã»¶T#7Pª„›Í¶Ü‚I¿\:Xç´d$ªJÿP÷}¦Ì¬1¹“KÖ¾ØóÙe£›› UT¢ø¥¡„K›(.
+RÔøD§W @¸{AéÀT%³^L§äx ëğ À'Dé¢KÄˆ(Uò©A‰Ê<B‚û	‘GÍ›………ÀÊ•+Y‰ÚĞĞPiiéâÅ‹wïŞM)++{ä‘G®¯ŸQÅjµÎ›7/33“9.EQ!~¿ßçóEDDL˜0¡ººzáÂ…Ç3™Lqqq£@‰~Âgõ­ø\D-'9RÀYEFõ­œèY  uáBXxÕWÍzÏuèŒÖ8§€%”(œyÈ+ráAª MJJúî¬sŸP*÷ùŒ N>ÿæ!E‘x•/A,øácÇû›‚g?™šs2_\Èuº(OD-c‰Şb²‡k±dÍ„ÃˆÂ‘$‰RÊŠx!?şøŞ½{+++‹ŠŠâââÌfsxxø†ÚÛÛ	!ñññ Ğ××§(
+C¦ª>Ÿ/))é£>€¦¦¦ììl›Í¦×ëóóó“““ÍfóÚµk_~ùå‹/fddTTT0ª?Š‚[Šfİÿş”öã!n'b¦A¥ØlH¹ÿA."rä°·Öl×FÛÔ3x0œaJX\â÷ş)áá§hQĞRÑh €ˆœìÈ´±ÎO*y A·¬ˆı²Ï–wß»ÿ-wµ@PÇ¤£0N%rÉºuH¥T±Ö0ã/G5Šá:	¤ÿøÇV«µ  à¥—^bµ¦K–,éììd•@µµµ@ >>¾»»;q¿¤Å3ÖÉLV«˜WTT,Z´H¯×swàÀŞdggøá‡G¯×H$îLI¯Õyà±g]—úîEtŒ1Åï®wÍöÄ_ö·õ´¾¿C;ÑjÖ¤KAÔDÎ†M†¿eBLUÕ––UU“““İn·Ãá°Ûí7s~#Gw§rÈnGgóî}Òe˜$~»@—•ÿÏÚİJ¶;Öşw .V2ËIÊ…–    IEND®B`‚Yimage/png_Ehttp://web.archive.org/static/images/toolbar/wayback-toolbar-logo.pngÔ !"O´bplist00ÔqrX$versionX$objectsY$archiverT$top † ¯##)*0123QRSTUVWXYZ[\]^_`abcdefghilU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €"€€€Ó$%'(WNS.base[NS.relative€ €€_=http://web.archive.org/static/images/toolbar/wm_tb_prv_on.pngÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®å6‚ ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬EFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-ModifiedYimage/png]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":0}_Sat, 28 Jan 2017 18:28:58 GMTS292Q0Zkeep-alive_W/"292-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/Ò+,mn_NSHTTPURLResponse£op/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑst_WebResourceResponse€    # - 2 7 ] c ~  … ˆ ‹  ’ • œ Ÿ ¢ ¥ ¨ « ­ ¯ ± ³ µ ¶ ¸ º ¼ ¾ À Â Ä Ë Ó ß á ã å%*5>DGPY[]dlw„†ˆŠŒ’”–˜šœ©«­¯±³µ·¹»½¿ÁÃĞ×Üé+6;IWaoª®ºÚŞàë	).;>CW[o}’¨             u              ªO$‰PNG
+
+   IHDR         &”N:   tEXtSoftware Adobe ImageReadyqÉe<   ÆIDATxÚ”Ó±
+AaÀq.I&‹’' ƒtÙÌ,’¼‚¤Øe`%™¬`ñ¼Áè,6ƒş_o .ß9õ[nıoçŞïŞ°ï¿BÊ)¢ï)‚Ø£ubè`„´\{şk˜Êzf%hİñ;LbŒâ¿V±aDÃD—7eÂ&ÈkÎÄ“•ÚÃ4á9pÑ„fî˜ËºK<\C;gtQÆVÚ9 ŠšĞŒùú7(aˆ«khç†
+XÙNówœĞF»·  • Æ#ÆÄ    IEND®B`‚_=http://web.archive.org/static/images/toolbar/wm_tb_prv_on.pngÔ$%&O´bplist00ÔqrX$versionX$objectsY$archiverT$top † ¯##)*0123QRSTUVWXYZ[\]^_`abcdefghilU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €"€€€Ó$%'(WNS.base[NS.relative€ €€_=http://web.archive.org/static/images/toolbar/wm_tb_nxt_on.pngÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®åDš ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬EFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-ModifiedYimage/png]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":1}_Sat, 28 Jan 2017 19:40:18 GMTS294Q0Zkeep-alive_W/"294-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/Ò+,mn_NSHTTPURLResponse£op/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑst_WebResourceResponse€    # - 2 7 ] c ~  … ˆ ‹  ’ • œ Ÿ ¢ ¥ ¨ « ­ ¯ ± ³ µ ¶ ¸ º ¼ ¾ À Â Ä Ë Ó ß á ã å%*5>DGPY[]dlw„†ˆŠŒ’”–˜šœ©«­¯±³µ·¹»½¿ÁÃĞ×Üé+6;IWaoª®ºÚŞàë	).;>CW[o}’¨             u              ªO&‰PNG
+
+   IHDR         &”N:   tEXtSoftware Adobe ImageReadyqÉe<   ÈIDATxÚ”ÒÏ
+AÀñÁ&9¹(yWí;p‘ä)”rP®œ)‡•?yWÊAùSÊ¸8psPÂwj§ö°1¿_}ÚÚú6³3qİÏT)5ÂN	&Š¶ğ–„oÿÙÀuÄmÂàd0ÄEIh&æÈIB3ÿĞúHIB=	4qB1ÛĞLP–„f’z ¸¡‹6á3´q5/ÿ…K´°·½3ª(„Ea+ŞÑóÿÇ¯­8Uõwtp±9)®0ÆZr'_ Î4"2İşõˆ    IEND®B`‚_=http://web.archive.org/static/images/toolbar/wm_tb_nxt_on.pngÔ()*OVbplist00ÔijX$versionX$objectsY$archiverT$top † ¯#)*0123MNOPQRSTUVWXYZ[\]^_`adU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €€€€Ó$%'(WNS.base[NS.relative€ €€_http://web.archive.org/web/jsp/graph.jsp?graphdata=550_27_1996:-1:000000000000_1997:-1:000000000000_1998:-1:000000000000_1999:-1:000000000000_2000:-1:000000000000_2001:-1:000100000000_2002:11:100001010001_2003:-1:010000000100_2004:-1:101100010010_2005:-1:111100010000_2006:-1:100000000000_2007:-1:000000000000_2008:-1:000000000000_2009:-1:010000000000_2010:-1:000000000000_2011:-1:000000000000_2012:-1:000000000100_2013:-1:001000100000_2014:-1:000000000001_2015:-1:000000000000_2016:-1:001000000001_2017:-1:000000000000Ò+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®åM ÈÓ456ALWNS.keysZNS.objectsª789:;<=>?@€	€
+€€€€€€€€ªBDEFGHIJK€€€€€€€€€€€ZConnection\Content-TypeVServerZSet-Cookie\X-Page-Cache_X-Archive-PlaybackTDateTLink_X-Archive-Wayback-Perf_Transfer-EncodingZkeep-aliveYimage/png]Tengine/2.1.0_=JSESSIONID=58040781117E5E66330C8D67C8C8FF33; Path=/; HttpOnlyTMISSQ0_Sat, 28 Jan 2017 20:25:02 GMT_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"[{"Total":1}XIdentityÒ+,bc\NSDictionary¢b/Ò+,ef_NSHTTPURLResponse£gh/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑkl_WebResourceResponse€    # - 2 7 Y _ z }  „ ‡ Š  ‘ ˜ ›  ¡ ¤ § © « ­ ¯ ± ² ´ ¶ ¸ º ¼ ¾ À Ç Ï Û İ ß áìñü "$+3>IKMOQSUWY[]hjlnprtvxz|~‰–¨µÊÏÔí$dik‹ÆÒÛàíğõ	!/ADZ             m              \OA‰PNG
+
+   IHDR  &      HµD  IDATxÚíÖK‚0Ğ®Ó±Ëqè²XŠ{@ ĞP iÑ&
+\úyº®ëCãC†2dÈ!ãpÈpÜZ2~'cØã¦ëkd|Ÿunñu{÷½Â£Ïù8Jß;uÿrËk÷2SÿÇ¿Ï3Rgéz­C}ìg´š3ı*¯s÷}îºµœ«é]®ZZ{ø¬q€‰0õ&`&`"LÀLÀD¿0`&`&`&`"LÀLÀD¿0`&`&`&`¢ÁLÀLô+00‘&`&`&`&ŠLÀLÀD/0`&`&`&`¢ÁLÀLÌ˜€	˜È 000E&`&`b®ÀLÀD˜€	˜€	˜€	˜(B00Q`&`&2ÀLÀLÀLÀDÈ 0Q`&`&2ÀLÀL¬˜€	˜È 0Q`&`&2ÀLÀLô+00‘&`&`&`&ŠLÀLÀD¿0`&`&`&`¢ÁLÀLô00‘&`&`&`ò70	?•1}Àjd}V|İæ}s˜T|ïÕûãˆá;—‹ßÀ¤t½2×C}T®ıª¸s÷}Öº5«Ïı¢õ¨µ‡OÇ¤<îÊıŞ    IEND®B`‚_http://web.archive.org/web/jsp/graph.jsp?graphdata=550_27_1996:-1:000000000000_1997:-1:000000000000_1998:-1:000000000000_1999:-1:000000000000_2000:-1:000000000000_2001:-1:000100000000_2002:11:100001010001_2003:-1:010000000100_2004:-1:101100010010_2005:-1:111100010000_2006:-1:100000000000_2007:-1:000000000000_2008:-1:000000000000_2009:-1:010000000000_2010:-1:000000000000_2011:-1:000000000000_2012:-1:000000000100_2013:-1:001000100000_2014:-1:000000000001_2015:-1:000000000000_2016:-1:001000000001_2017:-1:000000000000Ô,-./OØbplist00ÔrsX$versionX$objectsY$archiverT$top † ¯$#)*0123QRSTUVWXYZ[\]^_`abcdefghilmU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €#€€"€Ó$%'(WNS.base[NS.relative€ €€_4http://web.archive.org/static/js/disclaim-element.jsÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®åU. ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬DEFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-Modified_application/javascript]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":0}_Sat, 28 Jan 2017 18:28:58 GMTT1157Q0Zkeep-alive_W/"1157-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/_application/javascriptÒ+,no_NSHTTPURLResponse£pq/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑtu_WebResourceResponse€    # - 2 7 ^ d  ‚ † ‰ Œ  “ –    £ ¦ © ¬ ® ° ² ´ ¶ · ¹ » ½ ¿ Á Ã Å Ì Ô à â ä æ"-6<?HQSU\do|~€‚„†ˆŠŒ’”¡£¥§©«­¯±³µ·¹»ÈÏÔáúÿ#.3AOhv±µÁáæèó27DG`ey}‘Ÿ±´Ê             v              ÌO…function getFrameArea(frame) {
+  if(frame.innerWidth) return frame.innerWidth * frame.innerHeight;
+  if(frame.document.documentElement && frame.document.documentElement.clientHeight) return frame.document.documentElement.clientWidth * frame.document.documentElement.clientHeight;
+  if(frame.document.body) return frame.document.body.clientWidth * frame.document.body.clientHeight;
+  return 0;
+}
+
+function isLargestFrame() {
+	if(top == self) {
+		return true;
+	}
+	if(top.document.body.tagName == "BODY") {
+		return false;
+	}
+	largestArea = 0;
+	largestFrame = null;
+	for(i=0;i<top.frames.length;i++) {
+		frame = top.frames[i];
+		area = getFrameArea(frame);
+		if(area > largestArea) {
+			largestFrame = frame;
+			largestArea = area;
+		}
+	}
+	return (self == largestFrame);
+}
+
+function disclaimElement(element) {
+	if(isLargestFrame()) {
+		element.style.display="block";
+		document.body.insertBefore(element,document.body.firstChild);
+	}
+}
+
+function disclaimToggle(largest, nonLargest) {
+	if(isLargestFrame()) {
+		largest.style.display="block";
+		nonLargest.style.display="none";
+	} else {
+		largest.style.display="none";
+		nonLargest.style.display="block";
+	}
+}
+
+_application/javascript_4http://web.archive.org/static/js/disclaim-element.jsÔ1234OÒbplist00ÔrsX$versionX$objectsY$archiverT$top † ¯$#)*0123QRSTUVWXYZ[\]^_`abcdefghilmU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €#€€"€Ó$%'(WNS.base[NS.relative€ €€_.http://web.archive.org/static/js/graph-calc.jsÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®å]’ ÈÓ456CPWNS.keysZNS.objects¬789:;<=>?@AB€	€
+€€€€€€€€€€¬DEFGHIJKLMNO€€€€€€€€€€€€ €!\Content-TypeVServerTLink\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-PlaybackZConnectionTEtag]Accept-Ranges]Last-Modified_application/javascript]Tengine/2.1.0_8<http://mementoweb.org/terms/donotnegotiate>; rel="type"SHIT[{"Total":1}_Sat, 28 Jan 2017 18:28:58 GMTT1494Q0Zkeep-alive_W/"1494-1449087168000"Ubytes_Wed, 02 Dec 2015 20:12:48 GMTÒ+,jk\NSDictionary¢j/_application/javascriptÒ+,no_NSHTTPURLResponse£pq/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑtu_WebResourceResponse€    # - 2 7 ^ d  ‚ † ‰ Œ  “ –    £ ¦ © ¬ ® ° ² ´ ¶ · ¹ » ½ ¿ Á Ã Å Ì Ô à â ä æ'069BKMOV^ivxz|~€‚„†ˆŠŒ›Ÿ¡£¥§©«­¯±³µÂÉÎÛôù(-;Ibp«¯»Ûàâí,1>AZ_sw‹™«®Ä             v              ÆOÖfunction getEventX(event) {
+	var posx = 0;
+	if (event.pageX || event.pageY) {
+		posx =  event.pageX;
+	}
+	else if (event.clientX || event.clientY) 	{
+		posx = event.clientX + document.body.scrollLeft
+			+ document.documentElement.scrollLeft;
+	}
+	return posx;
+}
+function getOffset(elem) {
+  var box = (typeof elem.getBoundingClientRect !== 'undefined') ?
+    elem.getBoundingClientRect() : {top: 0, left: 0};
+  var w = window, d = elem.ownerDocument.documentElement;
+  return {
+    top: box.top + (w.pageYOffset || d.scrollTop) - (d.clientTop || 0),
+    left: box.left + (w.pageXOffset || d.scrollLeft) - (d.clientLeft || 0)
+  };
+}
+function getElementX(obj) {
+  return Math.round(getOffset(obj).left);
+}
+function zeroPad(str,len) {
+	var i;
+	var pad = "";
+	var s = str.toString();
+	for(i=s.length; i < len; i++) {
+		pad = "0".toString() + pad.toString();
+	}
+	return pad.toString() + s.toString();
+}
+
+function dateToTimestamp(date) {
+	return date.getFullYear() +
+		zeroPad(date.getMonth()+1,2) +
+		zeroPad(date.getDay()+1,2) +
+		zeroPad(date.getHours(),2) +
+		zeroPad(date.getMinutes(),2) +
+		zeroPad(date.getSeconds(),2);
+}
+
+function calcTimestamp(event,element,firstMS,lastMS) {
+	  var eventX = getEventX(event);
+	  var elementX = getElementX(element);
+	  var elementWidth = element.width;
+	  var msWidth = lastMS - firstMS;
+	  var x = eventX - elementX;
+	  var pct = x / elementWidth;
+	  var pctDate = pct * msWidth;
+	  var date = pctDate + firstMS;
+	  return dateToTimestamp(new Date(date));
+}
+_application/javascript_.http://web.archive.org/static/js/graph-calc.jsÔ6789O
+3bplist00Ô‡ˆX$versionX$objectsY$archiverT$top † ¯-#)*0123]^_`abcdefghijklmnopqrstuvwxyz{|}~‚U$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €,€€€Ó$%'(WNS.base[NS.relative€ €€_Shttp://web.archive.org/web/20030227185013/http://stephengoldin.com/gibson/nnext.gifÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®ågˆ ÈÓ456I\WNS.keysZNS.objects¯789:;<=>?@ABCDEFGH€	€
+€€€€€€€€€€€€€€€€¯KLMNOPQRTUVNXYZ[€€€€€€ €!€"€#€€$€%€&€€'€(€)€*€+\Content-Type_X-Archive-Orig-last-modified_Memento-DatetimeVServer_X-Archive-Orig-content-length_X-Archive-Orig-serverTLink_X-Archive-Orig-date_X-Archive-Orig-etag_X-Archive-Orig-content-type\X-Page-Cache_X-Archive-Wayback-PerfTDate^Content-Length_X-Archive-Playback_X-Archive-Orig-connectionZConnection_X-Archive-Orig-accept-rangesYimage/gif_Fri, 05 Jan 2001 16:03:02 GMT_Thu, 27 Feb 2003 18:50:13 GMT]Tengine/2.1.0T1101_LApache/1.3.14 (Unix) PHP/4.2.3 FrontPage/4.0.4.3 mod_ssl/2.7.1 OpenSSL/0.9.6_l<http://stephengoldin.com/gibson/nnext.gif>; rel="original", <http://web.archive.org/web/timemap/link/http://stephengoldin.com/gibson/nnext.gif>; rel="timemap"; type="application/link-format", <http://web.archive.org/web/http://stephengoldin.com/gibson/nnext.gif>; rel="timegate", <http://web.archive.org/web/20020918012908/http://stephengoldin.com/gibson/nnext.gif>; rel="prev first memento"; datetime="Wed, 18 Sep 2002 01:29:08 GMT", <http://web.archive.org/web/20030227185013/http://stephengoldin.com/gibson/nnext.gif>; rel="memento"; datetime="Thu, 27 Feb 2003 18:50:13 GMT", <http://web.archive.org/web/20130304162749/http://stephengoldin.com/gibson/nnext.gif>; rel="next memento"; datetime="Mon, 04 Mar 2013 16:27:49 GMT", <http://web.archive.org/web/20130930131925/http://stephengoldin.com/gibson/nnext.gif>; rel="last memento"; datetime="Mon, 30 Sep 2013 13:19:25 GMT"_Thu, 27 Feb 2003 18:50:56 GMT_"458260-44d-3a55f036"SHIT_{{"IndexLoad":50,"IndexQueryTotal":50,"RobotsCache":7,"RobotsFetchTotal":7,"RobotsTotal":7,"Total":1129,"WArcResource":1079}_Sat, 28 Jan 2017 20:25:02 GMTQ1UcloseZkeep-aliveUbytesÒ+,€\NSDictionary¢€/Ò+,ƒ„_NSHTTPURLResponse£…†/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑ‰Š_WebResourceResponse€    # - 2 7 g m ˆ ‹  ’ • ˜ œ Ÿ ¦ © ¬ ¯ ² µ · ¹ » ½ ¿ À Â Ä Æ È Ê Ì Î Õ İ é ë í ïEJU^dgpy{}„Œ—¬®°²´¶¸º¼¾ÀÂÄÆÈÊÌÎĞåçéëíïñóõ÷ùûıÿ	7JQq‰¤ºØåş'CNmw—·ÅÊ‰©ÁÅCcekv|‘–ª®ÂĞâåû             ‹              ıOMGIF87aH  Ä  ÿÿÿ¥kRçÖÎ”cJB!c9!Ö½­Z1ŒJ!1”Z1Î­”{B½Œc­{Rœc1„R)÷ïçÆœs   ÀÀÀ                                 ,    H  @ÿ`IÎ0ÓCÓhÚ¬©<N^&Ë
+[n–ê©dÇã, ` Å ª(ØÇ€` š@°x0@ñx@ÚÇ#€€0Šˆ `V@lqnx7OR€fvUNWX rg  	c@9dwbm^Xum†g]ˆ‰
+~"¸[º¸»P´¸	¸Á¾ÁOºÍÉ"¾O¾»Ó¼ÀSV^¯’²²Xlw‡Ú
+ÀR¶g€of‚
+O­_ïx¶‘ºø@€rÜÍ^Xy@Â¦ 
+ ˆ°ÀÁSP °À€Bƒ°8 rãN—rø $‚6 ä¶ „Úÿø±Á€@;v„Ó‚ÃA£6®@ñ¢àK—.^\ÕÁè‰ÊEhPó‰%øCõDƒ%~˜èÑ@
+“|jP`¬c_09ªÈ gŞœ	ÔÒÎ¤ ›nH“¬§7=Û´‘Ã¦¨$ _æøñiËµÅ8ä–Ã°‹ 4	à‚·ƒÆ” @Â›…Ho2À&°W åHDŸ-Áş˜±¨¥3H“BÆ–¨@i,ÕA01G[oÊÕ14t.yº/Ñ¼'ê„@> ‚ÌÈaªíœ|²	gÇÆ€¹ò(é˜V3DÖC"HM0LHı×ÿH!EKƒ8Hàƒ"˜ Pô	(ä–ƒTPé „ê	±†PIQ’Y,®PT%&ACSpÌw0Gk
+ñ"ÉO®0pÃsNPàO€bÎ_}øRî7…<-ùäÄ8\°ò…ìU˜
+Âø¢e=‘æPÜSR0a-T,–BXx”o½S R¼âˆ`ƒê  ÚŠ‡JîÈã˜	P4‰qì©Ídt€TjÌeŠƒšd%MÔ“ep…Ó8ĞÖÖm­49GLá°òi0€ŒÈc	 AñÔN`Ûd Fñ¦J„ö¤ËÒ0)‡À)ìŠ@›l¢  ’ @,¶$6ß¹½A–~@D!såÈ@^†1ÎŒ@;›2X MäÈD–ÅuGQriñ/¸ğã!	ä˜[  ¤œ,P À¦oB‘D€Ó,4Ñ®ø±Í¢ë1FgÒ&æHÏ6âDgiÔ;Ôô.<ê97ÑÉáZ ß%ÂwFZw”¸DÛ_‚JØL&¢à€aÓõÆ$S€2‰Mv3:† ØÖl-!mw3Ì‚s ;Yimage/gif_Shttp://web.archive.org/web/20021217224030/http://stephengoldin.com/gibson/nnext.gifÕ;<=>?O÷bplist00ÔX$versionX$objectsY$archiverT$top † ¯1#)*0123_`abcdefghijklmnopqrstuvwxyz{|}~€‚ƒ„…ˆU$nullİ	
+ !"R$6S$10R$2R$7R$3S$11R$8V$classR$4R$9R$0R$5R$1€	€€€ €0€€%€Ó$%'(WNS.base[NS.relative€ €€_chttp://web.archive.org/web/20021126072121js_/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgiÒ+,-.Z$classnameX$classesUNSURL¢-/XNSObject#A¾=5®åsd ÈÓ456J^WNS.keysZNS.objects¯789:;<=>?@ABCDEFGHI€	€
+€€€€€€€€€€€€€€€€€¯KLMNOPQRSUVWXYZ[\]€€€€€ €!€"€#€$€%€&€'€(€)€*€+€,€-€.€/\Content-Type_Memento-DatetimeZSet-CookieVServer_X-Archive-Orig-pragma_X-Archive-Orig-serverTLink_X-Archive-Orig-expires_X-Archive-Orig-date_X-Archive-Orig-content-type\X-Page-Cache_X-Archive-Wayback-Perf_X-Archive-Guessed-CharsetTDate_X-Archive-Playback_X-Archive-Orig-connectionZConnection_X-Archive-Orig-p3p^Content-Length_&application/x-javascript;charset=UTF-8_Tue, 26 Nov 2002 07:21:21 GMT_=JSESSIONID=A142DD8A89742C4460F15C30C2A9680F; Path=/; HttpOnly]Tengine/2.1.0Xno-cache_dApache/1.3.22 (Unix)  (Red-Hat/Linux) mod_ssl/2.8.5 OpenSSL/0.9.6b DAV/1.0.2 PHP/4.1.2 mod_perl/1.26_d<http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="original", <http://web.archive.org/web/timemap/link/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="timemap"; type="application/link-format", <http://web.archive.org/web/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="timegate", <http://web.archive.org/web/20000229200911/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="first memento"; datetime="Tue, 29 Feb 2000 20:09:11 GMT", <http://web.archive.org/web/20021119195437/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="prev memento"; datetime="Tue, 19 Nov 2002 19:54:37 GMT", <http://web.archive.org/web/20021126072121/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="memento"; datetime="Tue, 26 Nov 2002 07:21:21 GMT", <http://web.archive.org/web/20030202041907/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="next memento"; datetime="Sun, 02 Feb 2003 04:19:07 GMT", <http://web.archive.org/web/20161022142947/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi>; rel="last memento"; datetime="Sat, 22 Oct 2016 14:29:47 GMT"_(Saturday, February 15, 1997 10:10:10 GMT_Tue, 26 Nov 2002 07:15:12 GMT_application/x-javascriptSHIT_D{"IndexLoad":60,"IndexQueryTotal":60,"Total":334,"WArcResource":255}UUTF-8_Sat, 28 Jan 2017 20:25:02 GMTQ1UcloseZkeep-alive_Tpolicyref="http://www.goldstats.com/w3c/p3p.xml", CP="NOI DEVa TAIa OUR BUS UNI STA"S607Ò+,†‡\NSDictionary¢†/Ò+,‰Š_NSHTTPURLResponse£‹Œ/_NSHTTPURLResponse]NSURLResponse_NSKeyedArchiverÑ_WebResourceResponse€    # - 2 7 k q Œ  “ – ™ œ   £ ª ­ ° ³ ¶ ¹ » ½ ¿ Á Ã Ä Æ È Ê Ì Î Ğ Ò Ù á í ï ñ óY^irx{„‘˜ «ÁÃÅÇÉËÍÏÑÓÕ×ÙÛİßáãåçıÿ	!#%2EPWo‡Œ¥»Ùæÿ 5Q\q€©É	 ‡ï		:	U	Y	 	¦	Æ	È	Î	Ù
+0
+4
+9
+F
+I
+N
+b
+f
+z
+ˆ
+š
+
+³             ‘              
+µO_
+
+
+
+
+/*
+     FILE ARCHIVED ON 7:21:21 Nov 26, 2002 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 20:24:33 Jan 28, 2017.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+*/
+	tag = "<A HREF=\"/web/20021126072121/http://goldstats.com/cgi-bin/do/link.cgi?id="+acc+"\" target=_top><IMG" + 
+        " SRC=\"/web/20021126072121/http://goldstats.com/cgi-bin/do/stats.cgi?sw=" + sw+"&sh="+sh+"&c="+c+"&j="+j+"&js="
+	+js+"&p="+p+"&r="+r+"&id=" +acc+"&tt=1038294912" +
+        "\" BORDER=0></A>";
+_application/x-javascriptUutf-8_chttp://web.archive.org/web/20021217224030js_/http://goldstats.com/cgi-bin/stats-bin/do/get_code.cgi    1 < N d ‚ ™ ¨88888}8ˆ8‘8§=|C¡CºCêCóH¤rrrBrKw””§”ï”ø™°šØ››!ŸÙ¡¡C¡L§¦©ë«ö«ÿ°Ûµdµ}µ´µ½º“ÀmÀ†À·ÀÀÊ÷ÏHÏRÏ¨Ï³Û®ŞŞ,Ş2             @              Ş˜
