@@ -1,0 +1,85 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		DOSRC.A
+;+;	Purpose:	OB-MX update source value
+;+;	Original:		1993-07-17	D.N. Lynx Crowe
+;+;	Revision:	15	1993-12-07	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		do_mod_src()		update a changed source value
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	dosrc
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+;+ ---------------------------------------------------------------------------
+;+ stack offsets for arguments
+;+ ---------------------------------------------------------------------------
+
+a_val		equ		6		; val argument stack offset
+a_ns		equ		4		; ns argument stack offset
+a_vp		equ		2		; vp argument stack offset
+
+;+ ---------------------------------------------------------------------------
+;+ private registers used by do_mod_src()
+;+ ---------------------------------------------------------------------------
+
+	rseg	aregs(1)		; REGISTERS -- 4 bytes -- LOCAL (dosrc.a)
+
+rd_s0:		dsw		1		; temporary #1
+rd_s1:		dsw		1		; temporary #2
+
+; ----------------------------------------------------------------------------
+
+	rseg	hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	do_mod_src() -- update a changed source value
+;+;
+;+;	Prototype:
+;+;
+;+;		void do_mod_src(vp, ns, val);
+;+;		struct voice *vp;	voice pointer		&v[VA], &v[VB]
+;+;		WORD ns;      		performance parameter (VT) number   0..N_SRCS
+;+;		WORD val;  			initial (current) value		0x0000..0xFFFF
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 6 บ val arg บ
+; 	   ฬอออออออออน
+; 	 4 บ ns  arg บ
+; 	   ฬอออออออออน
+; 	 2 บ vp  arg บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	do_mod_src				; void do_mod_src(vp, ns, val)
+
+do_mod_src:
+
+	ldbze	rd_s0, a_ns[sp]				; get ns from stack
+	add		rd_s0, <rd_s0				; use ns as a WORD index
+	add		rd_s0, a_vp[sp]				; add vp from stack
+
+	ld		rd_s1, a_val[sp]			; get val from stack
+	st		rd_s1, voice_curval[rd_s0]	; vp->curval[ns] = val;
+	st		rd_s1, voice_outval[rd_s0]	; vp->outval[ns] = val;
+
+	ret									; we're out'a here
+
+; The End --------------------------------------------------------------------
+
+	end

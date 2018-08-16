@@ -1,0 +1,446 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		LFO.A
+;+;	Purpose:	OB-MX LFO processing
+;+;	Original:		1993-06-28	D.N. Lynx Crowe
+;+;	Revision:	51	1993-12-06	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		do_lfo()	process the LFOs
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	lfo
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	seed
+	extern	smooth
+	extern	v
+
+;+ ---------------------------------------------------------------------------
+
+TAP			equ		6					; random number generator tap bit
+
+;+ ---------------------------------------------------------------------------
+;+ TAP sets the feedback tap bit, and can be 2, 6, 8, or 12.
+;+
+;+ 6 and 8 work the best		(least discernable pattern to missed values).
+;+ 2 and 12 work OK			(noticeable pattern to missed values).
+;+
+;+ 0, 1, 3, 7, 9, 10, 11, 13, 14, and 15 give too many missed values.
+;+ ---------------------------------------------------------------------------
+
+TRMASK		equ		000FFH				; mask to create Tr from R
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	aregs(2)		; REGISTERS -- 16 bytes -- LOCAL (lfo.a)
+
+r_temp2:	dsl		1					; [ 0] scratch for multiplies
+r_temp2l	equ		r_temp2				; [ 0] scratch for multiplies
+r_temp2h	equ		r_temp2+2			; [ 2] scratch for multiplies
+
+r_tseg:		dsw		1					; [ 4] current time
+r_vcur		equ		r_tseg				; [ 4] current value
+
+r_temp3:	dsw		1					; [ 6] general scratch
+
+r_vp:		dsw		1					; [ 8] VOICE pointer
+r_lp:		dsw		1					; [10] LFO pointer
+
+r_t1:		dsw		1					; [12] general scratch
+r_t2:		dsw		1					; [14] temp for wraparound test
+
+;+ ----------------------------------------------------------------------------
+
+	public	lfo_regs		; REGISTERS -- 16 bytes -- DEBUG ACCESS (lfo.a)
+
+lfo_regs	equ		r_temp2				; debug access to do_lfo() registers
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ %dolfo -- macro to process an LFO
+;+ ---------------------------------------------------------------------------
+
+	macro	%dolfo							; <LFO:1,2,3>, <VOICE:A,B>
+
+; --- process the tick counter -----------------------------------------------
+
+	add		r_lp, r_vp, #voice_lfos+(LFO_\0*lfo_size)	; r_lp points at the lfo
+
+	ld		r_t1, lfo_tick[r_lp]			; see if tick count has run out
+	cmp		r_t1, #1
+	bh		?\1\00001						; go decrement ticks if not
+
+	ld		r_t1, lfo_tcnt[r_lp]			; reset the tick counter
+	st		r_t1, lfo_tick[r_lp]
+
+	ld		r_tseg, lfo_cntr[r_lp]			; r_tseg = current time (Tseg)
+
+	cmp		r_tseg, #07FFFH					; see if we maxed out last time ...
+	jne		?\1\00003						; jump if not
+
+	clr		r_tseg							; ... roll over to 0 if we did
+	sjmp	?\1\00004
+
+; --- not maxed out, time to increment ---------------------------------------
+
+?\1\00003:
+
+; --- add modulated increment to value counter -------------------------------
+
+	add		r_t1, r_vp, #voice_outval+(2*VT_LFO\0_RATE)
+	add		r_tseg, [r_t1]
+
+	jbs		r_tseg+1, 7, ?\1\00005			; jump if we've maxed out
+
+	ldbze	r_t1, lfo_shape[r_lp]			; see if lp->shape EQ LFO_RAND
+	cmp		r_t1, #LFO_RAND
+	jne		?\1\00004						; jump if not
+
+	ld		r_t1, lfo_rand[r_lp]			; get Tr ...
+	and		r_t1, #TRMASK					; ... from R
+	add		r_tseg, <r_t1					; add it to Tseg to randomize time
+
+?\1\00002:
+
+	jbc		r_tseg+1, 7, ?\1\00004			; see if we've maxed out ...
+
+?\1\00005:
+
+	ld		r_tseg, #07FFFH					; ... if so, limit to 0x7FFF
+
+?\1\00004:
+
+	st		r_tseg, lfo_cntr[r_lp]			; lp->cntr = Tseg  (update time)
+
+; ----------------------------------------------------------------------------
+; at this point:
+;
+;	r_lp		points at the LFO data structure
+;
+;	r_tseg		current time (Tseg)
+;
+;					below, it will become the current value (Vcur),
+;					after waveshaping has been applied,
+;					at which point we start calling it
+;
+;	r_vcur		current value (Vcur)
+;
+;					to make things easier to understand...
+;
+; ----------------------------------------------------------------------------
+
+; ----------------------------------------------------------------------------
+; process the waveshaping
+; ----------------------------------------------------------------------------
+
+	clr		r_t2							; reset wrap around flag
+
+	ldbze	r_t1, lfo_shape[r_lp]			; switch (lp->shape)
+	and		r_t1, #3
+	add		r_t1, <r_t1
+	ld		r_temp3, jt_\1\0[r_t1]
+	br		[r_temp3]
+
+; ----------------------------------------------------------------------------
+; case LFO_RAND: (random waveshape)
+; ----------------------------------------------------------------------------
+
+case_3_\1\0:
+
+	push	r_tseg							; save last Tseg
+
+	ldbze	r_t1, <r_tseg+1					; lookup S[Tseg] in smooth[]
+	and		r_t1, #0007FH
+	add		r_t1, <r_t1
+	ld		r_temp3, smooth[r_t1]
+
+; ----------------------------------------------------------------------------
+
+	mul		r_temp2, r_temp3, lfo_vnew[r_lp]	; S * Vnew
+	shll	r_temp2, #1						; scale result
+
+	push	r_temp2h
+
+	neg		r_temp3
+	add		r_temp3, #07FFFH
+
+	mul		r_temp2, r_temp3, lfo_vold[r_lp]	; (1 - S) * Vold
+	shll	r_temp2, #1						; scale result
+
+	pop		r_temp3
+
+	add		r_vcur, r_temp2h, <r_temp3		; Vcur = S * Vnew + (1 - S) * Vold
+
+; ----------------------------------------------------------------------------
+
+	pop		r_t1							; get last Tseg
+
+	cmp		r_t1, #07FFFH					; see if we hit the limit
+	jne		case_0_\1\0						; jump if not
+
+; --- in-line version of rand() -- generate a new random number -------------
+
+rand_test_\1\0:
+
+	add		r_t1, 0, seed					; get random seed
+	jne		rand_nz_\1\0					; jump if it's non-zero
+
+	ld		r_t1, TIMER1					; get a new seed from the timer
+	st		r_t1, seed						; ...
+
+	sjmp	rand_test_\1\0					; go check the new seed
+
+rand_nz_\1\0:
+
+	shr     r_t1, #1						; shift right 1 bit into carry
+	jnc     rand_nc_\1\0					; jump if no carry
+
+	jbs     r_t1, TAP, rand_done_\1\0		; carry bit = 1, jump if tap bit = 1
+
+	sjmp    rand_set_\1\0					; go set bit 15 = 1
+
+rand_nc_\1\0:
+
+	jbc     r_t1, TAP, rand_done_\1\0		; carry bit = 0, jump if tap bit = 0
+
+rand_set_\1\0:
+
+	orb     r_t1+1, #080H					; set bit 15 = 1
+
+rand_done_\1\0:
+
+	st		r_t1, seed						; update random seed
+	and		r_t1, #07FFFH					; mask random so it's positive
+	st		r_t1, lfo_rand[r_lp]			; update LFO random number
+
+; -- end of random number function orand() -----------------------------------
+
+	ld		r_t1, lfo_vnew[r_lp]			; lp->vold = lp->vnew
+	st		r_t1, lfo_vold[r_lp]
+
+	ld		r_t1, lfo_rand[r_lp]			; lp->vnew = lp->rand
+	st		r_t1, lfo_vnew[r_lp]
+
+?\1\00006:
+
+	sjmp	case_0_\1\0						; done random waveshaping
+
+; ----------------------------------------------------------------------------
+; case LFO_SAW:
+; ----------------------------------------------------------------------------
+
+case_1_\1\0:
+
+	add		r_tseg, <r_tseg					; shift left 1 bit
+	st		r_tseg, <r_t2					; stash for later test
+
+	jbc		r_tseg+1, 7, case_0_\1\0		; see if we've maxed out
+
+	and		r_tseg, #07FFFH					; mask down to 15 bits
+
+; ----------------------------------------------------------------------------
+; case LFO_TRI: (also does inversion around 0x7FFF for LFO_SAW)
+; ----------------------------------------------------------------------------
+
+case_2_\1\0:
+
+	ld		r_t1, #07FFFH					; invert around 0x7FFF
+	sub		r_vcur, r_t1, <r_tseg
+
+; ----------------------------------------------------------------------------
+; apply quantization, if any, to r_vcur
+;
+; NOTE: this looks at r_t2 since we want to have equal timed segments for
+; sawtooth waves that get quantized
+; ----------------------------------------------------------------------------
+
+case_0_\1\0:
+
+	add		r_temp3, 0, voice_outval+(2*VT_LFO\0_S_H)[r_vp]	; get quantization
+	je		?\1\00008						; no quantization if it's 0
+
+	ld		r_temp2, <r_vcur				; temp2 = Vcur
+	ext		r_temp2							; ...
+
+	div		r_temp2, <r_temp3				; temp2 = [temp2 / temp3]
+
+	jbc		r_t2+1, 7, ?\1\00007			; see if we rolled over earlier
+
+	inc		r_temp2							; if so, increment temp2
+
+?\1\00007:
+
+	mul		r_temp2, <r_temp3				; temp2 = temp2 * temp3
+
+	ld		r_vcur, <r_temp2l				; Vcur = (WORD)temp2
+
+; ----------------------------------------------------------------------------
+; apply the modulated offset to r_vcur
+; ----------------------------------------------------------------------------
+
+?\1\00008:
+
+	sub		r_vcur, #04000H					; apply the bias
+
+	ld		r_temp3, voice_outval+(2*VT_LFO\0_OFFSET)[r_vp]		; apply offset
+	shra	r_temp3, #1
+	add		r_vcur, <r_temp3
+
+	jnv		?\1\00016						; jump if no over/under-flow
+
+	jlt		?\1\00014						; jump if it's an underflow
+
+	ld		r_vcur, #07FFFH					; limit to 0x7FFF for overflow
+	sjmp	?\1\00016
+
+?\1\00014:
+
+	ld		r_vcur, #08001H					; limit to 0x8001 for underflow
+
+	sjmp	?\1\00016
+
+; ----------------------------------------------------------------------------
+; process an LFO for which the tick count is non-zero
+; (we assume it's positive...)
+; ----------------------------------------------------------------------------
+
+?\1\00001:
+
+	dec		r_t1							; decrement the ticks
+	st		r_t1, lfo_tick[r_lp]			; ...
+
+	ld		r_vcur, voice_curval+(2*VT_PP_LFO\0)[r_vp]	; pass the last value
+
+; ----------------------------------------------------------------------------
+; apply LFO delay  (ramp the output up to 0x7FFF from 0)
+;
+; at this point, r_vcur holds the current LFO value, Vcur
+; ----------------------------------------------------------------------------
+
+?\1\00016:
+
+	cmpb	0, lfo_delay[r_lp]				; delay specified ?
+	be		?\1\00018						; done if not
+
+	ld		r_temp3, lfo_dcntr[r_lp]		; put lp->dcntr in temp3
+
+	ldb		r_t1, voice_vtrig[r_vp]			; new trigger ?
+	jbc		r_t1, 0, ?\1\00024				; go check delay count if not
+
+	ld		r_t1, lfo_dtcnt[r_lp]			; reset delay tick counter
+	st		r_t1, lfo_dtick[r_lp]
+
+	clr		r_temp3							; reset delay counter
+	sjmp	?\1\00027						; go do delay multiply
+
+?\1\00024:
+
+	cmp		r_temp3, #07FFFH				; has delay counter maxed out ?
+	be		?\1\00018						; done if so
+
+	add		r_t1, 0, lfo_dtick[r_lp]		; has delay tick count run out ?
+	jne		?\1\00022						; go decrement ticks if not
+
+	ld		r_t1, lfo_dtcnt[r_lp]			; reset delay tick counter
+	st		r_t1, lfo_dtick[r_lp]
+
+	add		r_temp3, voice_outval+(2*VT_LFO\0_DELAY)[r_vp]	; increment delay count
+	jbc		r_temp3+1, 7, ?\1\00027			; check for overflow into sign bit
+
+	ld		r_temp3, #07FFFH				; limit delay count to 0x7FFF
+
+?\1\00027:
+
+	st		r_temp3, lfo_dcntr[r_lp]		; update lp->dcntr from temp3
+	sjmp	?\1\00023						; go do multiply and store new LFO value
+
+; --- decrement delay tick count ---------------------------------------------
+
+?\1\00022:
+
+	dec		r_t1							; decrement the ticks
+	st		r_t1, lfo_dtick[r_lp]
+
+; --- multiply r_tseg by delay value ----------------------------------------
+
+?\1\00023:
+
+	mul		r_temp2, r_vcur, <r_temp3		; multiply value by delay value
+	add		r_vcur, r_temp2h, <r_temp2h		; make result a word
+
+; ----------------------------------------------------------------------------
+; store updated value for this LFO in the value tables
+; ----------------------------------------------------------------------------
+
+?\1\00018:
+
+	add		r_t1, r_vp, #(2*VT_PP_LFO\0)	; point at LFO slot
+
+	st		r_vcur, voice_curval[r_t1]		; vp->curval[VT_PP_LFO\0] = r_vcur
+	st		r_vcur, voice_outval[r_t1]		; vp->outval[VT_PP_LFO\0] = r_vcur
+
+	sjmp	?\1\0_next						; go do next LFO
+
+; ----------------------------------------------------------------------------
+; --- jump table for switch (lp->shape) --------------------------------------
+; ----------------------------------------------------------------------------
+
+jt_\1\0:	dcw		case_0_\1\0				; case LFO_RAMP		0
+			dcw		case_1_\1\0				; case LFO_SAW		1
+			dcw		case_2_\1\0				; case LFO_TRI		2
+			dcw		case_3_\1\0				; case LFO_RAND		3
+
+; ----------------------------------------------------------------------------
+
+?\1\0_next:		; jump here around jump table for switch
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	do_lfo() -- process the LFOs
+;+;
+;+;	Prototype:
+;+;
+;+;		void do_lfo()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	acode
+
+	public	do_lfo			; void do_lfo()
+
+do_lfo:
+
+; ----------------------------------------------------------------------------
+; We do 6 invocations of the basic LFO code macro %dolfo
+; to handle each of the 3 LFOs for the 2 voices.
+; ----------------------------------------------------------------------------
+
+	ld		r_vp, #v					; do VOICE A
+
+	%dolfo	1,A							; LFO_1
+	%dolfo	2,A							; LFO_2
+	%dolfo	3,A							; LFO_3
+
+	ld		r_vp, #v+voice_size			; do VOICE B
+
+	%dolfo	1,B							; LFO_1
+	%dolfo	2,B							; LFO_2
+	%dolfo	3,B							; LFO_3
+
+	ret
+
+;;; The End ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	end

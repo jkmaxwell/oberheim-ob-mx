@@ -1,0 +1,488 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		VOICEA.A
+;+;	Purpose:	OB-MX IPC FIFO handling functions
+;+;	Original:		1993-05-25	D.N. Lynx Crowe
+;+;	Revision:	34	1994-06-10	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		handle_ipc()		process the bytes in the IPC input FIFO
+;+;		reset_parser()		reset IPC state machine
+;+;		ipc_wait()			wait for IPC activity
+;+;
+;+;		limit				force pitches to remain in limits
+;+;
+;+;		init_snap()			initialize snap buffer
+;+;		snap()				quick and dirty snapshot trace
+;+;
+;+;		ipc_temp			handle_ipc -- temporary
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+;	{Ch 1}	1994-05-18	D.N. Lynx Crowe
+;+;	{Ch 1}	corrected order of operations in limit()
+
+;+;	{Ch 2}	1994-06-07	D.N. Lynx Crowe
+;+;	{Ch 2}	trimmed snap code to make space and updated comments
+
+;+;	{Ch 3}	1994-06-07	D.N. Lynx Crowe
+;+;	{Ch 3}	added conditional assembly for tuning and hsi variable snap
+
+;+;	{Ch 4}	1994-06-08	D.N. Lynx Crowe
+;+;	{Ch 4}	added more snap code
+
+;+;	{Ch 5}	1994-06-08	D.N. Lynx Crowe
+;+;	{Ch 5}	added conditional assembly for snap code
+
+	name    voicea
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	ipc_state_0
+
+	extern	ipc_fifo
+	extern	if_start
+	extern	if_end
+	extern	ipc_state
+
+;+ ---------------------------------------------------------------------------
+
+SNAPIT		equ			0		; enable snap code
+
+DEBUG_HSI	equ			0		; snap HSI inputs
+DEBUG_ALL	equ			0		; snap all HSI inputs if NZ, else snap HSI.0
+
+DEBUG_TUN	equ			0		; snap tuning calculations
+
+DEBUG_CVT	equ			0		; snap VCO1 variables
+
+;+ ---------------------------------------------------------------------------
+
+	extern	r_stat
+	extern	hsiflags
+
+;+ ---------------------------------------------------------------------------
+
+	rseg	aregs(1)			; REGISTERS -- 8 bytes -- GLOBAL
+
+	public	ipc_temp			; VAR in aregs	WORD
+
+ipc_temp:	dsw		1			; handle_ipc -- temporary
+
+;+ ---------------------------------------------------------------------------
+;+ D E B U G   C O D E
+;+ ---------------------------------------------------------------------------
+
+	if		SNAPIT
+
+	public	snapadr				; VAR in aregs	WORD
+	public	snapcnt				; VAR in aregs	WORD
+	public	snaplog				; VAR in aregs	WORD
+
+snapadr:	dsw		1			;- snap address pointer
+snapcnt:	dsw		1			;- snap counter
+snaplog:	dsw		1			;- snap log code
+
+;+ ---------------------------------------------------------------------------
+
+	rseg	adata(1)
+
+			if		DEBUG_TUN
+SNAP_LEN	equ		19			;- DEBUG_TUN length of a snapshot in WORDs
+N_SNAP		equ		192			;- DEBUG_TUN number of snapshots to allow
+			endif
+
+			if		DEBUG_HSI
+
+			if		DEBUG_ALL
+SNAP_LEN	equ		16			;- DEBUG_ALL length of a snapshot in WORDs
+N_SNAP		equ		384			;- DEBUG_ALL number of snapshots to allow
+			else	; DEBUG_ALL
+SNAP_LEN	equ		8			;- DEBUG_HSI length of a snapshot in WORDs
+N_SNAP		equ		384			;- DEBUG_HSI number of snapshots to allow
+			endif	; DEBUG_ALL
+
+			endif	; DEBUG_HSI
+
+			if		DEBUG_CVT
+SNAP_LEN	equ		20			;- DEBUG_CVT length of a snapshot in WORDs
+N_SNAP		equ		384			;- DEBUG_CVT number of snapshots to allow
+			endif
+
+SNAP_CNT	equ		N_SNAP+1			; buffer length in entries
+
+SB_LEN		equ		SNAP_LEN*SNAP_CNT	; buffer length in WORDs
+
+;+ ---------------------------------------------------------------------------
+
+	public	snapbuf
+	public	snapend
+
+snapbuf:	dsw		SB_LEN		;- snapshot buffer
+snapend:
+
+;+ ---------------------------------------------------------------------------
+
+;+ register definitions  (temporaries preserved on the stack)
+
+r_ptrs		equ		TEMP+2		; [ 0] bmov pointers
+
+r_srcw		equ		r_ptrs		; [ 0] bmov source pointer
+r_dstw		equ		r_ptrs+2	; [ 2] bmov destination pointer
+
+r_wcnt		equ		r_ptrs+4	; [ 4] bmov word count
+
+		endif	; SNAPIT
+
+;+ ---------------------------------------------------------------------------
+;+ E N D   O F   D E B U G   C O D E
+;+ ---------------------------------------------------------------------------
+
+	rseg    hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	handle_ipc() -- process the bytes in the IPC input FIFO
+;+;
+;+;	Prototype:
+;+;
+;+;		void handle_ipc()
+;+;
+;+;	Calls:
+;+;
+;+;		(*ipc_state)()
+;+;
+;+;	WARNING: the code relies on the length of ipc_fifo being a power of 2.
+;+;	----
+;+;	The code will break if the length of ipc_fifo[] is changed to a value
+;+;	which isn't a power of 2, or if FMASK doesn't match the length.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	handle_ipc			; void handle_ipc()
+
+handle_ipc:
+
+	sjmp	hi_w1e					; while there is data in the FIFO ...
+
+hi_w1s:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	inc		if_end					; get byte from FIFO
+	and		if_end, #FMASK			; ... (see WARNING above)
+	ldbze	ipc_temp, ipc_fifo[if_end]	; ...
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	push 	ipc_temp				; push byte on stack
+	push	#hi_w1r					; push return address on stack
+
+	ld		ipc_temp, ipc_state		; get IPC state function pointer
+	br		[ipc_temp]				; jump to IPC state function  (fake lcall)
+
+hi_w1r:
+
+	pop		ipc_temp				; clear byte off stack
+		
+hi_w1e:
+
+	cmp		if_start, <if_end		; see if FIFO is empty
+	jne		hi_w1s					; go handle byte if not
+
+h1_done:
+
+	ret								; return to caller, FIFO empty
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc_wait() -- wait for IPC activity
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc_wait()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	ipc_wait
+
+ipc_wait:
+
+	cmp		if_start, <if_end		; see if FIFO is empty
+	je		ipc_wait				; hang until it isn't
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	reset_parser() -- reset IPC state machine
+;+;
+;+;	Prototype:
+;+;
+;+;		void reset_parser()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	reset_parser		; void reset_parser()
+
+reset_parser:
+
+	pusha	; START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	clr		if_start				; reset FIFO head pointer
+	clr		if_end					; reset FIFO tail pointer
+
+	ld		ipc_temp, #ipc_state_0	; reset IPC parser state
+	st		ipc_temp, ipc_state		; ... to ipc_state_0
+
+	popa	; END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret								; return to caller
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	limit - limit pitch CV in r2  (obviously not a C function...)
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	limit
+
+limit:
+
+	add		r2, 0					; see if it's negative
+	jge		limit1					; jump if not
+
+	clr		r2						; force negative pitches to 0
+	sjmp	limit2
+
+limit1:
+
+	cmp		r2, #0FFFH				; see if it's too large
+	jnh		limit2					; jump if not
+
+	ld		r2, #0FFFH				; force over-range to maximum pitch
+
+limit2:
+
+	ret								; return
+
+; ---------------------------------------------------------------------------
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	if		SNAPIT
+
+;+ ---------------------------------------------------------------------------
+;+	D E B U G   C O D E
+;+ ---------------------------------------------------------------------------
+
+	extern	a_v1_e2
+	extern	a_v1_e6
+	extern	a_v1_off
+	extern	a_v1_scl
+	extern	a_v1_offy
+	extern	a_v1_scly
+	extern	cvtable
+	extern	hsi0_last
+	extern	hsi0_val
+	extern	tunetry
+	extern	tune_vars
+	extern	v
+
+A_VCO1_PITCH	equ		64			; voice A cvtable offset for VCO1 pitch
+A_VCO1_SCALE	equ		66			; voice A cvtable offset for VCO1 scale
+A_VCO2_PITCH	equ		72			; voice A cvtable offset for VCO2 pitch
+A_VCO2_SCALE	equ		74			; voice A cvtable offset for VCO2 scale
+A_MM_FREQ		equ		80			; voice A cvtable offset for MM frequency
+A_MM_SCALE		equ		82			; voice A cvtable offset for MM scale
+A_OB_FREQ		equ		88			; voice A cvtable offset for OB frequency
+A_OB_SCALE		equ		90			; voice A cvtable offset for OB scale
+
+B_VCO1_PITCH	equ		68			; voice B cvtable offset for VCO1 pitch
+B_VCO1_SCALE	equ		70			; voice B cvtable offset for VCO1 scale
+B_VCO2_PITCH	equ		76			; voice B cvtable offset for VCO2 pitch
+B_VCO2_SCALE	equ		78			; voice B cvtable offset for VCO2 scale
+B_MM_FREQ		equ		84			; voice B cvtable offset for MM frequency
+B_MM_SCALE		equ		86			; voice B cvtable offset for MM scale
+B_OB_FREQ		equ		92			; voice B cvtable offset for OB frequency
+B_OB_SCALE		equ		94			; voice B cvtable offset for OB scale
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	snap() -- quick and dirty snapshot trace
+;+;
+;+;	snapadr is initialized to &snapbuf by tuner()
+;+;
+;+;	writes SNAP_LEN words / entry to *snapadr
+;+;
+;+;	updates snapadr, increments snapcnt
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	acode(1)
+
+	public	snap			; void snap()
+
+snap:
+
+	pusha										; DISABLE INTERRUPTS
+
+	push	r_srcw								; preserve registers
+	push	r_dstw
+	push	r_wcnt
+
+	add		r_srcw, 0, snapctl					; see if we should snap
+	jne		snap_go								; jump if so
+
+	sjmp	no_snap								; skip snap
+
+snap_go:
+
+	ld		r_srcw, snapcnt						; see if the buffer is full
+	cmp		r_srcw, #N_SNAP
+	jnh		snap_chk
+
+	sjmp	no_snap
+
+snap_chk:
+
+	add		r_dstw, 0, <snapadr					; setup the pointer
+	jne		snap_ok
+
+	sjmp	no_snap
+
+snap_ok:
+
+	if	DEBUG_TUN
+
+	; ----- 00..18 -----
+	
+		ld		r_srcw, snapcnt					;- DEBUG_TUN [0] write snapcnt
+		st		r_srcw, [r_dstw]+
+	
+		ld		r_srcw, tunetry					;- DEBUG_TUN [1] write tunetry
+		st		r_srcw, [r_dstw]+
+	
+		ldbze	r_srcw, snaplog					;- DEBUG_TUN [2] write snaplog
+		st		r_srcw, [r_dstw]+
+	
+		ld		r_srcw, #a_v1_offy				;- DEBUG_TUN [8] write offset update
+		ldbze	r_wcnt, #16
+		bmov	r_ptrs, r_wcnt
+
+	endif	; DEBUG_TUN
+
+; ----------------------------------------------------------------------------
+
+	if		DEBUG_HSI
+
+		jbs		snaplog+1, 0, no_snap				; only log oscillators
+
+		if		
+
+			ld		r_srcw, snaplog						;- DEBUG_ALL [0] write snaplog
+			st		r_srcw, [r_dstw]+
+
+			ld		r_srcw, #tunetry					;- DEBUG_ALL [1..15] write hsi vars
+			ldbze	r_wcnt, #15
+			bmov	r_ptrs, r_wcnt
+
+		else	; DEBUG_ALL -------
+
+			jbc		r_stat, 0, no_snap					; only log VCO1
+
+			ld		r_srcw, snaplog						;- DEBUG_HSI [0] write snaplog
+			st		r_srcw, [r_dstw]+
+
+			ld		r_srcw, #tunetry					;- DEBUG_HSI [1..5] write tunetry..hsiflags
+			ldbze	r_wcnt, #5
+			bmov	r_ptrs, r_wcnt
+
+			ld		r_srcw, hsi0_last					;- DEBUG_HSI [6] hsi0_last
+			st		r_srcw, [r_dstw]+
+
+			ld		r_srcw, hsi0_val					;- DEBUG_HSI [7] hsi0_val
+			st		r_srcw, [r_dstw]+
+
+		endif	; DEBUG_ALL
+
+	endif	; DEBUG_HSI
+
+; ----------------------------------------------------------------------------
+
+	if		DEBUG_CVT
+
+		ld		r_srcw, snapcnt						;- DEBUG_CVT [0] write snapcnt
+		st		r_srcw, [r_dstw]+
+
+		ld		r_srcw, snaplog						;- DEBUG_CVT [1] write snaplog
+		st		r_srcw, [r_dstw]+
+
+		ld		r_srcw, tunetry						;- DEBUG_CVT [2] write tunetry
+		st		r_srcw, [r_dstw]+
+
+		ld		r_srcw, hsiflags					;- DEBUG_CVT [3] write hsiflags
+		st		r_srcw, [r_dstw]+
+
+		ld		r_srcw, #a_v1_offy					;- DEBUG_CVT [4..19] write cvtable
+		ldbze	r_wcnt, #16
+		bmov	r_ptrs, r_wcnt
+
+	endif	; DEBUG_CVT
+
+; ----------------------------------------------------------------------------
+
+; end of record
+
+	add		snapadr, #SNAP_LEN*2				; update snapadr
+	inc		snapcnt								; increment snapcnt
+
+no_snap:
+
+	pop		r_wcnt								; restore registers
+	pop		r_dstw
+	pop		r_srcw
+
+	popa										; RESTORE INTERRUPTS
+
+	ret											; return to caller
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	init_snap() -- initialize snap buffer
+;+;
+;+; Destroys: r0, TEMP+2 (r_srcw), TEMP+4 (r_dstw), TEMP+6 (r_wcnt)
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	init_snap		; void init_snap()
+
+init_snap:
+
+	pusha										; DISABLE INTERRUPTS
+
+	st		0, snapbuf							; clear snapbuf[0]
+
+	ld		r_srcw, #snapbuf					; copy snapbuf[0] over snapbuf[1..end]
+	ld		r_dstw, #snapbuf+2					; ... this clears snapbuf to 0s
+	ld		r_wcnt, #SB_LEN-1					; (can you remember "mlcwa ..." and the days
+	bmov	r_ptrs, r_wcnt						;  when mainframes had 16,000 char. core memory ?)
+
+	ld		snapadr, #snapbuf					; initialze snapadr = &snapbuf
+
+	clr		snapcnt								; clear snapcnt
+	clr		snaplog								; clear snaplog
+
+	popa										; ENABLE INTERRUPTS
+
+	ret											; return
+
+;+ ---------------------------------------------------------------------------
+
+	public	snapctl								; CONST in hcode	WORD
+
+snapctl:	dcw		1							;- non-zero to enable snap
+
+	endif	; SNAPIT
+
+;+ ---------------------------------------------------------------------------
+;+ E N D   O F   D E B U G   C O D E
+;+ ---------------------------------------------------------------------------
+
+;;; The End ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	end

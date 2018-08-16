@@ -1,0 +1,506 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		GATE.A
+;+;	Purpose:	OB-MX gate/ungate functions
+;+;	Original:		1993-06-07	D.N. Lynx Crowe
+;+;	Revision:	46	1993-12-14	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		gate_ungate1()		gate/ungate VOICE A
+;+;		gate_ungate2()		gate/ungate VOICE B
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name    gate
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	fml_tab
+	extern	ipc_byte1
+	extern	ipc_byte2
+	extern	tml_tab
+	extern	v
+	extern	vin_tab
+
+;+ ---------------------------------------------------------------------------
+;+ Some important notes about vgate and vtrig
+;+ ---------------------------------------------------------------------------
+;+
+;+ vgate can take on values of:
+;+
+;+	0x80	voice un-gated		(set by gate.a)
+;+	0x00	voice not gated		(set by env.a when it finds vgate = 0x80)
+;+	0x01	voice gated on		(set by gate.a)
+;+
+;+ This is done so that env.a knows explicitly when a voice receives note off.
+;+
+;+ vtrig is set to 0x01 in gate.a and usually reset in env.a, which may decide
+;+ to set it to 0x01 again in the case of a free-run/repeat mode sync attempt.
+;+ ---------------------------------------------------------------------------
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+	%kbtrk -- VCO keyboard tracking macro
+;+ ---------------------------------------------------------------------------
+;+	This does VCO keyboard tracking and tuning table lookup
+;+
+;+	NOTE: both macro parameters must be numeric, not symbolic.
+;+
+;+	on entry:
+;+
+;+		r6		VOICE pointer
+;+
+;+	Updates:
+;+
+;+		vp->note1 or vp->note2
+;+
+;+	Trashes:	r0, r_val, r_valh, r_op
+;+ ---------------------------------------------------------------------------
+
+	macro	%kbtrk		; <VCO:1,2>, <VOICE:0,1>	(NOT VA or VB!)
+
+	add		r_op, r6, #voice_vcos+((\0-1)*vco_size)	; point at VCO
+
+	ldbze	r0, vco_track[r_op]				; get tracking value
+	cmp		r0, #127						; should we use the tuning table ?
+	jne		usetr_\1\0						; jump if not
+
+;+ --- tracking = 127 --- use tuning table -----------------------------------
+
+	ldbze	r0, ipc_byte1					; get note number
+	add		r0, r0							; use it as a WORD index
+	add		r0, r6			 				; point at the tuning table
+	ld		r_valh, voice_tunetab[r0]		; get vp->tunetab[ipc_byte1]
+	sjmp	stnote_\1\0						; go update note
+
+; --- overflow, negative result handling -------------------------------------
+
+novf_\1\0:
+
+	jlt		nneg_\1\0						; jump if it's underflow
+
+	ld		r_valh, #07FFFH					; limit overflow to 0x7FFF
+	sjmp	stnote_\1\0						; go update note
+
+nneg_\1\0:
+
+	clr		r_valh							; limit underflow to 0
+	sjmp	stnote_\1\0						; go update note
+
+;+ --- tracking = 0..126 --- use tracking value ------------------------------
+;+
+;+ Note that since we use 127 as the code for the tuning table we get a
+;+ symmetric range around 0=63:  0..62, 63, 64..126
+;+
+;+ We use it as the index into tml_tab+2 to get the actual multiplier,
+;+ centered around 64.
+
+usetr_\1\0:
+
+	add		r0, r0							; turn r0 into a WORD index
+	ld		r0, tml_tab+2[r0]				; get the multiplier
+	clr		r_val							; get note in MS byte of r_val
+	ldb		r_val+1, ipc_byte1				; ... (ljzf)
+	sub		r_val, #03C00H					; subtract "60" (ljzf)
+	mul		r_val, r0						; multiply note by tr
+	clrvt									; reset overflow trap
+	shll	r_val, #2						; scale result
+	add		r_valh, #03C00H					; add "60" (ljzf)
+	jvt		novf_\1\0						; jump if overflow occurred
+
+	jbs		r_valh+1, 7, nneg_\1\0			; jump if result is negative
+
+stnote_\1\0:
+
+	sub		r_valh, #03C00H					; center around middle C  (MIDI 60)
+	st		r_valh, voice_note\0[r6]		; store target note
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+	%kbtrkf -- VCF keyboard tracking macro
+;+ ---------------------------------------------------------------------------
+;+	This does VCF keyboard tracking (centered around Middle C - MIDI 60 0x3C)
+;+
+;+	NOTE: both macro parameters must be numeric, not symbolic.
+;+
+;+	on entry:
+;+
+;+		r2		points at vp->curval[]
+;+		r4		points at vp->outval[]
+;+		r6		VOICE pointer (vp)
+;+
+;+	Updates:
+;+
+;+		vp->curval[VT_MM_ADJUST] or vp->outval[VT_MM_ADJUST]
+;+	and
+;+		vp->curval[VT_OB_ADJUST] or vp->outval[VT_OB_ADJUST]
+;+
+;+	Trashes:	r0, r_val, r_valh, r_fp
+;+ ---------------------------------------------------------------------------
+
+	macro	%kbtrkf		; <VCF:0=MM,1=OB>, <VOICE:0,1>		(NOT VA or VB!)
+
+	add		r_fp, r6, #voice_vcfs+((\0)*vcf_size)	; point at VCF
+
+	sjmp	usetr_f\1\0						; jump around error code
+
+; --- overflow, negative result handling ------------------------------------
+
+novf_f\1\0:
+
+	jlt		nneg_f\1\0						; jump if it's underflow
+
+	ld		r_valh, #07FFFH					; limit overflow to 0x7FFF
+	sjmp	stnote_f\1\0					; go update note
+
+nneg_f\1\0:
+
+	clr		r_valh							; limit underflow to 0
+	sjmp	stnote_f\1\0					; go update note
+
+; --- apply tracking value --------------------------------------------------
+
+usetr_f\1\0:
+
+	ldbze	r0, vcf_kbtrk[r_fp]				; get tracking value
+	and		r0, #3							; mask out possible garbage
+	add		r0, r0							; turn r0 into a WORD index
+	ld		r0, fml_tab[r0]					; get the multiplier
+	clr		r_val							; get note in MS byte of r_val
+	ldb		r_val+1, ipc_byte1				; ... (ljzf)
+	sub		r_val, #03C00H					; subtract "60" (ljzf)
+	mul		r_val, r0						; multiply note by tr
+	clrvt									; reset overflow trap
+	shll	r_val, #2						; scale result
+	add		r_valh, #03C00H					; add "60" (ljzf)
+	jvt		novf_f\1\0						; jump if overflow occurred
+
+	jbs		r_valh+1, 7, nneg_f\1\0			; jump if result is negative
+
+stnote_f\1\0:
+
+	sub		r_valh, #03C00H					; center around Middle C  (MIDI 60 0x3C)
+
+	if		(0 EQ \0)
+	st		r_valh, (2*VT_MM_ADJUST)[r2]	; store frequency in vp->curval[]
+	st		r_valh, (2*VT_MM_ADJUST)[r4]	; store frequency in vp->outval[]
+	else
+	st		r_valh, (2*VT_OB_ADJUST)[r2]	; store frequency in vp->curval[]
+	st		r_valh, (2*VT_OB_ADJUST)[r4]	; store frequency in vp->outval[]
+	endif
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %gate_ungate -- gate/ungate macro
+;+ ---------------------------------------------------------------------------
+;+ This is used to generate gate_ungate1() and gate_ungate2(), below.
+;+
+;+	In general:
+;+
+;+		r0		is used as scratch
+;+		r2		points at vp->curval[]
+;+		r4		points at vp->outval[]
+;+		r6		points at the voice (vp)
+;+		r8		is used as scratch
+;+
+;+	NOTE:  the parameter MUST be 0 or 1 -- not symbolic VA or VB, as it's
+;+	passed to the %kbtrk macro.
+;+ ---------------------------------------------------------------------------
+
+	macro	%gate_ungate				; <VOICE:0,1>		(NOT VA or VB!)
+
+	push	r_op						; preserve registers
+	push	r_fp
+	push	r_val
+	push	r_valh
+	push	r0
+	push	r2
+	push	r4
+	push	r6
+	push	r8
+
+	ld		r6, #v+(\0*voice_size)		; point at voice
+
+	add		r2, r6, #voice_curval		; point at vp->curval[]
+	add		r4, r6, #voice_outval		; point at vp->outval[]
+
+	cmpb	0, ipc_byte2				; see if it's gate or ungate
+	jne		gate_\0						; go do gate if velocity NE 0
+
+	sjmp	ungate_\0					; go do ungate (velocity EQ 0)
+
+; ***************************************************************************
+; *********************************** G A T E *******************************
+; ***************************************************************************
+
+gate_\0:
+
+	ld		r0, voice_note_ons[r6]		; update note on count for legato
+	inc		r0							; ...
+	st		r0, voice_note_ons[r6]		; ...
+
+	clr		r0							; store target note number ...
+	ldb		r0+1, ipc_byte1				; ...
+	st		r0, voice_note[r6]			; ... in vp->note
+
+	sub		r0, #04000H					; adjust to +126, -128
+	add		r0, r0						; ...
+
+	st		r0, (2*VT_PP_NOTE)[r2]		; store in vp->curval[VT_PP_NOTE]
+	st		r0, (2*VT_PP_NOTE)[r4]		; ... and vp->outval[VT_PP_NOTE]
+
+; ---------------------------------------------------------------------------
+; apply VCO keyboard tracking or tuning table
+; ---------------------------------------------------------------------------
+
+	%kbtrk	1, \0						; update note number in vp->note1
+	%kbtrk	2, \0						; update note number in vp->note2
+
+; ---------------------------------------------------------------------------
+; apply VCF keyboard tracking
+; ---------------------------------------------------------------------------
+
+	%kbtrkf	0, \0						; update MM VCF frequency
+	%kbtrkf	1, \0						; update OB VCF frequency
+
+; ---------------------------------------------------------------------------
+; handle VELOCITY INVERSION
+; ---------------------------------------------------------------------------
+
+	public	velinv_\0					; ***** DEBUG *****
+
+velinv_\0:								; ***** DEBUG *****
+
+; ---------------------------------------------------------------------------
+
+	ld		r8, voice_inverts[r6]		; check velocity invert flag
+	and		r8, #M_INV_VEL				; ...
+	jne		gi1_\0						; jump if we invert velocity
+
+	ldb		r0+1, ipc_byte2				; use raw velocity
+	sjmp	gi2_\0						; ...
+
+gi1_\0:
+
+	ldbze	r8, ipc_byte2				; use inverted velocity
+	ldb		r0+1, vin_tab[r8]			; ...
+
+gi2_\0:
+
+	clrb	r0							; clear low byte of r0,r1 pair
+
+	st		r0, voice_vel[r6]			; store velocity in vp->vel
+	st		r0, (2*VT_PP_VELOCITY)[r2]	; ... in vp->curval[VT_PP_VELOCITY]
+	st		r0, (2*VT_PP_VELOCITY)[r4]	; ... in vp->outval[VT_PP_VELOCITY]
+
+; ---------------------------------------------------------------------------
+; calculate scaled velocity for envelopes
+; ---------------------------------------------------------------------------
+
+	add		r8, r6, #voice_envs					; point at envelopes
+
+	sub		r0, #07F00H							; setup velocity - "1" in r0
+
+	mul		r_val, r0, (2*VT_ENV1_VEL_SENS)[r4]	; setup ENV1 scaled velocity
+	shll	r_val, #2							; ...
+	st		r_valh, env_s_vel[r8]				; ...
+
+	mul		r_val, r0, (2*VT_ENV2_VEL_SENS)[r4]	; setup ENV2 scaled velocity
+	shll	r_val, #2							; ...
+	st		r_valh, env_s_vel+env_size[r8]		; ...
+
+	mul		r_val, r0, (2*VT_ENV3_VEL_SENS)[r4]	; setup ENV3 scaled velocity
+	shll	r_val, #2							; ...
+	st		r_valh, env_s_vel+(2*env_size)[r8]	; ...
+
+	mul		r_val, r0, (2*VT_ENV4_VEL_SENS)[r4]	; setup ENV4 scaled velocity
+	shll	r_val, #2							; ...
+	st		r_valh, env_s_vel+(3*env_size)[r8]	; ...
+
+; --- see if we're already gated --------------------------------------------
+
+	ldb		r0, voice_vgate[r6]			; already gated ?
+	jbc		r0, 0, gate_\0_dogate		; go do gating if not
+
+; --- already gated - check for legato mode ---------------------------------
+
+	cmpb	0, voice_legato[r6]			; in legato mode (voice_legato EQ 0) ?
+	je		gate_\0_gated				; go check portamento if so
+
+; --- not in legato - (re)trigger -------------------------------------------
+
+gate_\0_dogate:
+
+	ldb		r0, #001H					; r0 = 0x01
+	stb		r0, voice_vtrig[r6]			; trigger the voice,	vp->vtrig = 0x01
+	stb		r0, voice_vgate[r6]			; ... and gate it on,	vp->vgate = 0x01
+
+; --- gated - check portamento ----------------------------------------------
+
+gate_\0_gated:
+
+	cmpb	0, voice_port[r6]			; see if portamento is enabled
+	jne     gu_pinit_\0					; go setup portamento if so
+
+	sjmp	gu_pfix_\0					; go fixup portamento
+
+; ---------------------------------------------------------------------------
+; PORTAMENTO calculation
+; ---------------------------------------------------------------------------
+
+gu_pinit_\0:
+
+	add		r_op, r6, #voice_vcos			; set r_op to point at VCO1
+
+	ld		r_val, voice_note1[r6]			; get vp->note1
+	sub		r_val, (2*VT_VCO1_CNOTE)[r2]	; subtract vp->curval[VT_VCO1_CNOTE]
+	st		r_val, vco_pdiff[r_op]			; store in op->pdiff
+
+	mul		r_val, (2*VT_VCO1_PORT)[r4]		; op->pdiff * vp->outval[VT_VCO1_PORT]
+	st		r_val, vco_pincl[r_op]			; op->pincl = loword(r_val)
+	st		r_valh, vco_pinch[r_op]			; op->pinch = hiword(r_val)
+
+	clr		r_val							; clear low word of r_val
+	ld		r_valh, (2*VT_VCO1_CNOTE)[r2]	; r_valh = vp->curval[VT_VCO1_CNOTE]
+	shrl	r_val, #2						; shift currrent note into position
+	st		r_val, vco_paccl[r_op]			; op->paccl = loword(r_val)
+	st		r_valh, vco_pacch[r_op]			; op->pacch = hiword(r_val)
+
+	add		r_op, r6, #voice_vcos+vco_size	; set r_op to point at VCO2
+
+	ld		r_val, voice_note2[r6]			; get vp->note2
+	sub		r_val, (2*VT_VCO2_CNOTE)[r2]	; subtract vp->curval[VT_VCO2_CNOTE]
+	st		r_val, vco_pdiff[r_op]			; store in op->pdiff
+
+	mul		r_val, (2*VT_VCO2_PORT)[r4]		; op->pdiff * vp->outval[VT_VCO2_PORT]
+	st		r_val, vco_pincl[r_op]			; op->pincl = loword(r_val)
+	st		r_valh, vco_pinch[r_op]			; op->pinch = hiword(r_val)
+
+	clr		r_val							; clear low word of r_val
+	ld		r_valh, (2*VT_VCO2_CNOTE)[r2]	; r_valh = vp->curval[VT_VCO2_CNOTE]
+	shrl	r_val, #2						; shift currrent note into position
+	st		r_val, vco_paccl[r_op]			; op->paccl = loword(r_val)
+	st		r_valh, vco_pacch[r_op]			; op->pacch = hiword(r_val)
+
+	sjmp	gu_done_\0						; done with portamento calculations
+
+; ***************************************************************************
+; ******************************* U N G A T E *******************************
+; ***************************************************************************
+
+ungate_\0:
+
+	ld		r0, voice_note_ons[r6]		; update note on count for legato
+	dec		r0							; ...
+	st		r0, voice_note_ons[r6]		; ...
+
+	cmpb	0, voice_legato[r6]			; are we in legato mode (voice_legato EQ 0) ?
+	jne		gu_nl_\0					; go do ungate if not
+
+	cmp		r0, 0						; are all notes off ?
+	jne		gu_done_\0					; done if not
+
+gu_nl_\0:
+
+	ldb		r0, #080H					; setup for explicit ungate = 0x80
+	stb		r0, voice_vgate[r6]			; ungate the voice, vp->vgate = 0x80
+
+	sjmp	gu_done_\0					; go restore registers and exit
+
+; ---------------------------------------------------------------------------
+; PORTAMENTO FIXUP -- makes current note = target note
+; ---------------------------------------------------------------------------
+
+gu_pfix_\0:
+
+	ld		r0, voice_note1[r6]			; fixup VCO1 portamento current note 
+
+	st		r0, (2*VT_VCO1_CNOTE)[r2]	; ... in vp->curval[VT_VCO1_CNOTE]
+
+	ld		r0, voice_note2[r6]			; fixup VCO2 portamento current note 
+
+	st		r0, (2*VT_VCO2_CNOTE)[r2]	; ... in vp->curval[VT_VCO2_CNOTE]
+
+; ---------------------------------------------------------------------------
+; common exit code
+; ---------------------------------------------------------------------------
+
+gu_done_\0:
+
+	pop		r8							; restore registers
+	pop		r6
+	pop		r4
+	pop		r2
+	pop		r0
+	pop		r_valh
+	pop		r_val
+	pop		r_fp
+	pop		r_op
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	aregs(1)
+
+;+ ---------------------------------------------------------------------------
+;+ NOTE:  the following equates depend on the C compiler putting its TEMP
+;+ entries at 0EAH..0FFH.  If this isn't the case, the following won't work.
+;+
+;+ Hint:  if the -s20,234 option changes, things will be different...
+;+ ---------------------------------------------------------------------------
+
+r_op	equ		TEMP			; must be on WORD boundary
+
+r_val	equ		TEMP+2			; must be on LONG boundary
+r_valh	equ		TEMP+4			; must be on WORD boundary adjacent to r_val
+
+r_fp	equ		TEMP+6			; must be on WORD boundary
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	acode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	gate_ungate1() -- gate/ungate VOICE A
+;+;
+;+;	Prototype:
+;+;
+;+; 	void gate_ungate1();
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	gate_ungate1		; void gate_ungate1()
+
+gate_ungate1:
+
+	%gate_ungate	0					; gate/ungate VOICE A
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	gate_ungate2() -- gate/ungate VOICE B
+;+;
+;+;	Prototype:
+;+;
+;+; 	void gate_ungate2();
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	gate_ungate2		; void gate_ungate2()
+
+gate_ungate2:
+
+	%gate_ungate	1					; gate/ungate VOICE B
+
+	ret
+
+; The End --------------------------------------------------------------------
+
+	end

@@ -1,0 +1,356 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		CALC.A
+;+;	Purpose:	OB-MX miscellaneous functions
+;+;	Original:		1993-06-28	D.N. Lynx Crowe
+;+;	Revision:	36	1993-12-07	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		do_mod_dst()	do modulations for a changed DST value
+;+;		rand()			generate a 16 bit pseudo-random number
+;+;		set_pan()		set VT_MIX_PAN from p_pan and v_pan
+;+;		srand()			set seed for pseudo-random number generator
+;+;
+;+;		seed			random number generator seed
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	calc
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	par_dst
+	extern	par_val
+	extern	v
+
+;+ ---------------------------------------------------------------------------
+;+ Equates:
+;+ ---------------------------------------------------------------------------
+
+TAP			equ		6					; random number generator tap bit
+
+;+ ---------------------------------------------------------------------------
+;+ TAP sets the feedback tap bit, and can be 2, 6, 8, or 12.
+;+
+;+ 6 and 8 work the best	(least discernable pattern to missed values).
+;+ 2 and 12 work OK			(noticeable pattern to missed values).
+;+
+;+ 0, 1, 3, 7, 9, 10, 11, 13, 14, and 15 give too many missed values.
+;+ ---------------------------------------------------------------------------
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg    aregs(2)		; REGISTERS -- 26 bytes -- LOCAL (calc.a)
+
+;+ ---------------------------------------------------------------------------
+;+ private registers used by do_mod_dst()
+;+ ---------------------------------------------------------------------------
+
+r_aval:		dsl		1			; accumulator
+r_avall		equ		r_aval		; low word of accumulator
+r_avalh		equ		r_aval+2	; high word of accumulator
+
+r_t1:		dsl		1			; temporary #1  (and low WORD of (LONG)r_t1)
+r_t2		equ		r_t1+2		; temporary #2  (and high WORD of (LONG)r_t1)
+
+r_val:		dsw		1			; value
+r_src:		dsw		1			; source value
+r_srp:		dsw		1			; source pointer
+r_par:		dsw		1			; preset parameter index
+r_mlt:		dsw		1			; multiplier
+r_nv:		dsw		1			; VT index from preset parameter index
+r_nd:		dsw		1			; VT index from destination (DST)
+r_mp:		dsw		1			; MOD pointer
+r_vp:		dsw		1			; VOICE pointer
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	adata(1)
+
+;+ ---------------------------------------------------------------------------
+
+	public	seed			; VAR in adata	WORD
+
+seed:		dsw     1		; random number seed
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	srand() -- set seed for pseudo-random number generator
+;+;
+;+;	Prototype:
+;+;
+;+;		WORD srand(seed);
+;+;		WORD seed;				random number seed	0x0000 . 0x7FFF
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public  srand			; WORD srand(seed)
+
+srand:
+
+	ld      r0, 2[sp]					; get new random seed from stack
+	st		r0, seed
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	rand() -- generate a 16 bit pseudo-random number
+;+;
+;+;	Prototype:
+;+;
+;+;		WORD rand();
+;+;
+;+;	Uses a simple 16 bit non-linear feedback shift register
+;+;	with feedback from bits 0 and TAP into bit 15
+;+;
+;+;	Range: 0x0000 .. 0xFFFF
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public  rand			; WORD rand()
+
+rand:
+
+	add		r0, 0, seed					; get random seed
+	jne		rand_nz						; jump if it's non-zero
+
+	ld		r0, TIMER1					; get a new seed from the timer
+	st		r0, seed
+
+	sjmp	rand						; go check the new seed
+
+rand_nz:
+
+	shr     r0, #1						; shift right 1 bit into carry
+	jnc     rand_nc						; jump if no carry
+
+	jbs     r0, TAP, rand_done			; carry bit = 1, jump if tap bit = 1
+
+	sjmp    rand_set					; go set bit 15 = 1
+
+rand_nc:
+
+	jbc     r0, TAP, rand_done			; carry bit = 0, jump if tap bit = 0
+
+rand_set:
+
+	orb     r0+1, #080H					; set bit 15 = 1
+
+rand_done:
+
+	st      r0, seed					; save seed, leave result in r0
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	do_mod_dst() -- do modulations for a changed DST value
+;+;
+;+;	Prototype:
+;+;
+;+;		INT do_mod_dst(vp, par, val);
+;+;		struct voice *vp;		voice pointer				&v[VA], &v[VB]
+;+;		BYTE par;				preset parameter number		0..NUM_PARAM
+;+;		WORD val;				initial (current) value		0x0000..0xFFFF
+;+;
+;+;	Returns:
+;+;
+;+;		modulated (output) value			also in: outval[par_val[par]]
+;+;
+;+;	Checks to be sure that the parameter goes somewhere by looking it up
+;+;	in par_val[].
+;+;
+;+; Sets vp->curval[par_val[par]] = val
+;+;
+;+;	Follows the DST chain starting at vp->dst_ptr[par_dst[par]] and
+;+;	applies the MODs it finds associated with the parameter.
+;+;
+;+;	Stores modulated value in vp->outval[par_val[par]].
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+a_vp	equ		2			; vp argument stack offset
+a_par	equ		4			; par argument stack offset
+a_val	equ		6			; val argument stack offset
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 6 บ   val   บ
+; 	   ฬอออออออออน
+; 	 4 บ   par   บ
+; 	   ฬอออออออออน
+; 	 2 บ   vp    บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	do_mod_dst			; INT do_mod_dst(vp, par, val)
+
+do_mod_dst:
+
+	ld		r_val, a_val[sp]				; r_val = val
+
+	ldbze	r_par, a_par[sp]				; r_par = par
+	ldbze	r_nv, par_val[r_par]			; r_nv = par_val[par]
+
+	cmp		r_nv, #00FFH					; done if nv EQ 0x00FF
+	be		dmd_ret
+
+	add		r_nv, <r_nv						; double nv for use as a WORD index
+
+	ld		r_vp, a_vp[sp]					; r_vp = vp
+
+	add		r_t1, r_vp, <r_nv				; point at vp+nv
+	st		r_val, voice_curval[r_t1]		; vp->curval[nv] = val
+
+	ldbze	r_nd, par_dst[r_par]			; r_nd = par_dst[par]
+
+	cmp		r_nd, #00FFH					; check the destination index
+	be		dmd_upd							; done if nd EQ 0x00FF
+
+	add		r_t1, r_vp, #voice_dstptr		; mp = vp->dstptr[nd]
+	add		r_t1, <r_nd
+	add		r_t1, <r_nd
+	add		r_mp, 0, [r_t1]
+	be		dmd_upd							; done if no modulations
+
+; ---------------------------------------------------------------------------
+
+dmd_do:
+
+	add		r_mlt, 0, mod_mlt[r_mp]			; get multiplier
+	je		dmd_do_next						; skip MOD if multiplier is zero
+
+	ld		r_srp, mod_srp[r_mp]			; get SRC pointer
+	ld		r_src, [r_srp]					; get SRC value
+	clrvt									; reset overflow trap
+	mul		r_aval, r_src, <r_mlt			; aval = src * mp->mlt
+	shll	r_aval, #2						; scale result
+
+	add		r_avalh, <r_val					; accumulate modulation
+	jnvt	dmd_rok							; jump if no over/under-flow
+
+	jlt		dmd_unf							; jump if it's underflow
+
+	ld		r_avalh, #07FFFH				; limit overflow to 0x7FFF
+	sjmp	dmd_rok
+
+dmd_unf:
+
+	ld		r_avalh, #08001H				; limit underflow to 0x8001
+
+dmd_rok:
+
+	ld		r_val, <r_avalh					; val = avalh
+
+dmd_do_next:
+
+	add		r_mp, 0, mod_nxd[r_mp]			; mp = mp->nxd -- follow DST chain
+	bne		dmd_do							; do next MOD if there is one
+
+; ---------------------------------------------------------------------------
+
+dmd_upd:
+
+	add		r_t1, r_vp, #voice_outval		; vp->outval[nv] = val
+	add		r_t1, <r_nv
+	st		r_val, [r_t1]
+
+dmd_ret:
+
+	ld		r0, <r_val						; r0 = val
+
+	ret										; return(val)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	set_pan() -- set VT_MIX_PAN from p_pan and v_pan
+;+;
+;+;	Prototype:
+;+;
+;+;		WORD set_pan(vb);
+;+;		WORD vb;		voice index: VA=0, VB=1
+;+;
+;+;	Returns:
+;+;
+;+;		PAN CV value:	0x0000 .. 0x7FFF
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ   vb    บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	set_pan
+
+set_pan:
+
+	push	r2
+	push	r4
+
+; ----------------------------------------------------------------------------
+; Stack at this point:
+;
+; 	   ษอออออออออป
+; 	 6 บ   vb    บ
+; 	   ฬอออออออออน
+; 	 4 บ RETURN  บ
+; 	   ฬอออออออออน
+; 	 2 บ r2  old บ
+; 	   ฬอออออออออน
+; 	 0 บ r4  old บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	ld		r2, #v							; set r2 to point at voice A
+
+	add		r0, 0, 6[sp]					; see if it should be voice B
+	je		setp_1							; go do pan calculation if not
+
+	add		r2, #voice_size					; offset r2 to point to voice B
+
+setp_1:
+
+	ld		r0, voice_m_pan[r2]				; get MIDI pan value
+	sub		r0, #00040H						; make it a signed value
+	add		r0, voice_p_pan[r2]				; get part pan value
+	sub		r0, #00040H						; make it a signed value
+	add		r0, voice_v_pan[r2]				; add voice pan value
+	jge		setp_2							; go check range if it's positive
+
+	clr		r0								; negative values turn into zero
+	sjmp	setp_4							; done -- go restore registers & return
+
+setp_2:
+
+	cmp		r0, #0007FH						; see if we're in range
+	jle		setp_3							; go adjust result if so
+
+	ld		r0, #07FFFH						; overrange values turn into 0x7FFF
+	sjmp	setp_4							; done -- go restore registers & return
+
+setp_3:
+
+	shl		r0, #8							; adjust result in r0
+
+setp_4:
+
+	pop		r4								; restore registers
+	pop		r2
+
+	ret										; RETURN -- r0 = result
+
+; The End --------------------------------------------------------------------
+
+	end

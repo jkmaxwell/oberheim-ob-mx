@@ -1,0 +1,942 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		QPOTS.A
+;+;	Purpose:	OB-MX QuadPot interface
+;+;	Original:		1993-08-04	D.N. Lynx Crowe
+;+;	Revision:	36	1993-12-15	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		wqpot2()		write a 2-byte command to a quadpot
+;+;		wqpot3()		write a 3-byte command to a quadpot
+;+;		setpots()		set QuadPot data registers from wiper registers
+;+;
+;+;	This version leaves interrupts enabled to avoid loss of IPC data,
+;+;	but this can stretch out the QuadPot timing, and opens us up to
+;+;	possible hardware contention and shared variable clobbers...
+;+;	This doesn't seem to currently be a problem, but watch out...
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	qpots
+
+	lstout-
+
+$REG8096.inc
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	diagmode
+	extern	ioc1_img
+	extern	r_mstime
+
+;+ ---------------------------------------------------------------------------
+
+T_HSO	equ		2			; count to add to TIMER1 for HSO timing
+
+BIT6N	equ		not(BIT6)	; bit 6 not
+
+QP_JAM	equ		080H		; global copy WCR to WDR
+QP_TIME	equ		6			; wait time (2 ms units) for QuadPot EEPROM update
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ A note on timing
+;+ ----------------
+;+
+;+ The 80C198 uses a 12MHz clock.  Each machine state takes 2 clock cycles,
+;+ giving a state time of 166.6667 ns per state.  SKIP instructions take
+;+ 3 states each, so 2 of them give us pretty close to 1 microsecond of delay.
+;+ We take advantage of this in the %wait.. macros below.
+;+ ---------------------------------------------------------------------------
+
+;+ ---------------------------------------------------------------------------
+;+ %mswait -- macro to wait n*3 milliseconds
+;+ ---------------------------------------------------------------------------
+;+ This macro depends on timer_isr() decrementing r_mstime for its timing.
+;+ ---------------------------------------------------------------------------
+
+	macro	%mswait			; <msec>
+
+	ld		r_mstime, #\0
+
+?msw_\@:
+
+	or		r_mstime, <r_mstime
+	jne		?msw_\<
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait1 -- macro to wait 1 microsecond  (6 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait1			; {no arguments}
+
+	skip	0							;  3 states = 500ns
+	skip	0							;  3 states = 500ns
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait2 -- macro to wait 2 microseconds  (12 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait2			; {no arguments}
+
+	%wait1								;  6 states = 1 microsecond
+	%wait1								;  6 states = 1 microsecond
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait3 -- macro to wait 3 microseconds  (18 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait3			; {no arguments}
+
+	%wait1								;  6 states = 1 microsecond
+	%wait2								; 12 states = 2 microseconds
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait4 -- macro to wait 4 microseconds  (24 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait4			; {no arguments}
+
+	%wait2								; 12 states = 2 microseconds
+	%wait2								; 12 states = 2 microseconds
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait5 -- macro to wait 5 microseconds  (30 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait5			; {no arguments}
+
+	%wait1								;  6 states = 1 microsecond
+	%wait4								; 24 states = 4 microseconds
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait7 -- macro to wait 7 microseconds  (42 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait7			; {no arguments}
+
+	%wait2								; 12 states = 2 microseconds
+	%wait5								; 30 states = 5 microseconds
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait10 -- macro to wait 10 microseconds  (60 states)
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait10			; {no arguments}
+
+	%wait5								; 30 states = 5 microsecond
+	%wait5								; 30 states = 5 microseconds
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %sda_flt -- macro to float SDA HIGH
+;+ ---------------------------------------------------------------------------
+
+	macro	%sda_flt			; {no arguments}
+
+	andb	ioc1_img, #BIT6N			; IOC1.6 = 0 -- disable SDA output
+	ldb		IOC1, <ioc1_img				; ... on HSO.5
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %sda_low -- macro to drive SDA LOW
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes: HSO.5 is LOW  (required)
+;+ ---------------------------------------------------------------------------
+
+	macro	%sda_low			; {no arguments}
+
+	orb		ioc1_img, #BIT6				; IOC1.6 = 1 -- enable SDA output
+	ldb		IOC1, <ioc1_img				; ... on HSO.5
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %scl0 -- macro to set SCL = 0
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes:	SCL = x		SDA = x
+;+ leaves:	SCL = 0		SDA = x
+;+ ---------------------------------------------------------------------------
+
+	macro	%scl0			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #000H			; HSO.0 (SCL) = 0
+	add		HSO_TIME, TIMER1, #T_HSO
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %scl1 -- macro to set SCL = 1
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes:	SCL = x		SDA = x
+;+ leaves:	SCL = 1		SDA = x
+;+ ---------------------------------------------------------------------------
+
+	macro	%scl1			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #020H			; HSO.0 (SCL) = 1
+	add		HSO_TIME, TIMER1, #T_HSO
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %sda0 -- macro to set SDA = 0
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes:	SCL = x		SDA = x
+;+ leaves:	SCL = x		SDA = 0
+;+ ---------------------------------------------------------------------------
+
+	macro	%sda0			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #005H			; HSO.5 (SDA) = 0
+	add		HSO_TIME, TIMER1, #T_HSO
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %sda1 -- macro to set SDA = 1
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes:	SCL = x		SDA = x
+;+ leaves:	SCL = x		SDA = 1
+;+ ---------------------------------------------------------------------------
+
+	macro	%sda1			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #025H			; HSO.5 (SDA) = 1
+	add		HSO_TIME, TIMER1, #T_HSO
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %start -- macro to START the QuadPot bus
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes:	SCL = x		SDA = x
+;+ leaves:	SCL = 1		SDA = 0
+;+ ---------------------------------------------------------------------------
+
+	macro	%start			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #021H			; disable prescaler (HSO.1 = 1)
+	add		HSO_TIME, TIMER1, #T_HSO
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	%wait10								; WAIT 10 microseconds
+
+	%scl0								; SCL = 0
+
+	%wait10								; WAIT 10 microseconds
+
+	%sda_flt							; float SDA (HSO.5) output
+
+	%sda0								; preset HSO.5 (SDA) = 0
+
+	%wait10								; WAIT 10 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait10								; WAIT 10 microseconds
+
+	%sda_low							; SDA = 0
+
+	%wait1								; WAIT 1 microseconds
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %stop -- macro to STOP the QuadPot bus
+;+ ---------------------------------------------------------------------------
+;+
+;+ assumes:	SCL = 1		SDA = x
+;+ leaves:	SCL = 1		SDA = 1
+;+ ---------------------------------------------------------------------------
+
+	macro	%stop			; {no arguments}
+
+	%scl0								; SCL = 0
+
+	%wait5								; WAIT 5 microseconds
+
+	%sda_low							; drive SDA = 0
+
+	%wait5								; WAIT 5 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait7								; WAIT 7 microseconds
+
+	%sda_flt							; float SDA (HSO.5) output
+
+	%wait10								; WAIT 10 microseconds
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #001H			; enable prescaler (HSO.1 = 0)
+	add		HSO_TIME, TIMER1, #T_HSO
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	%wait10								; WAIT 10 microseconds
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	acode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	wqpot2() -- write a 2-byte command to a quadpot
+;+;
+;+;	Prototype:
+;+;
+;+;		void wqpot2(pot, cmd)
+;+;		WORD pot;	pot address		050H..053H		iiii pp rr
+;+;		WORD cmd;	pot command		000H..0FFH		0101 00 pp
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ---------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษออออออออออป
+; 	 4 บ cmd  arg บ		000H..0FFH	pot command		iiii pp rr
+; 	   ฬออออออออออน
+; 	 2 บ pot  arg บ		050H..053H	pot address		0101 00 pp
+; 	   ฬออออออออออน
+; 	 0 บ RETURN   บ
+; 	   ศออออออออออผ
+; ---------------------------------------------------------------------------
+
+wq2_pot		equ		6		; pot argument stack offset
+wq2_cmd		equ		8		; cmd argument stack offset
+
+	public	wqpot2			; void wqpot2(pot, cmd)
+
+wqpot2:
+
+	push	r0							; save registers
+	push	r2
+
+; ---------------------------------------------------------------------------
+; Stack at this point:
+;
+; 	   ษออออออออออป
+; 	 8 บ cmd  arg บ		000H..0FFH	pot command		iiii pp rr
+; 	   ฬออออออออออน
+; 	 6 บ pot  arg บ		050H..053H	pot address		0101 00 pp
+; 	   ฬออออออออออน
+; 	 4 บ RETURN   บ
+; 	   ฬออออออออออน
+; 	 2 บ r0 image บ
+; 	   ฬออออออออออน
+; 	 0 บ r2 image บ
+; 	   ศออออออออออผ
+; ---------------------------------------------------------------------------
+
+; ---------------------------------------------------------------------------
+; prepare QuadPot bus for output
+;
+; assumes:	SCL = x		SDA = x
+; leaves:	SCL = 1		SDA = 0
+; ---------------------------------------------------------------------------
+
+	%start								; START QuadPot bus
+
+; ---------------------------------------------------------------------------
+; setup pot address byte to output
+; ---------------------------------------------------------------------------
+
+	ldb		r0, wq2_pot[sp]				; get the pot address byte
+	ldb		r1, #8						; set the bit counter
+
+; ---------------------------------------------------------------------------
+; output address byte
+;
+; assumes:		SCL = 1		SDA = x
+; leaves:		SCL = 1		SDA = x
+; ---------------------------------------------------------------------------
+
+w2_out_adr:
+
+	%scl0								; SCL = 0
+
+	%wait4								; WAIT 4 microseconds
+
+	jbc		r0, 7, w2_oa_0				; jump if SDA should be 0
+
+	%sda_flt							; SDA = 1
+	sjmp	w2_oa_wait					; go clock data
+
+w2_oa_0:
+
+	%sda_low							; SDA = 0
+
+w2_oa_wait:
+
+	%wait4								; WAIT 4 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait10								; WAIT 10 microseconds
+
+	addb	r0, <r0						; shift next bit left into bit 7
+
+	djnz	r1, w2_out_adr				; loop for 8 bits
+
+; ---------------------------------------------------------------------------
+; wait for acknowledge
+;
+; assumes:	SCL = 1		SDA = x
+; leaves:	SCL = 1		SDA = 0
+; ---------------------------------------------------------------------------
+
+	%scl0
+
+	%wait4								; WAIT 4 microseconds
+
+	%sda_flt							; float SDA
+
+	%wait5								; WAIT 5 microseconds for slave ACK
+
+	%scl1								; SCL = 1
+
+	%wait3								; WAIT 3 microseconds
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w2_ack_ok1			; jump if ACK ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w2_ack_ok1			; jump if ACK ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w2_ack_ok1			; jump if ACK ok  (SDA = 0)
+
+	sjmp	w2_abort					; abort if no ack received  (SDA = 1)
+
+w2_ack_ok1:
+
+	%wait5								; WAIT 5 microseconds
+
+; ---------------------------------------------------------------------------
+; setup pot command byte to output
+; ---------------------------------------------------------------------------
+
+	ldb		r0, wq2_cmd[sp]				; get the pot command byte
+	ldb		r1, #8						; set the bit counter
+
+; ---------------------------------------------------------------------------
+; output command byte
+;
+; assumes:		SCL = 1		SDA = x
+; leaves:		SCL = 1		SDA = x
+; ---------------------------------------------------------------------------
+
+w2_out_cmd:
+
+	%scl0								; SCL = 0
+
+	%wait4								; WAIT 4 microseconds
+
+	jbc		r0, 7, w2_oc_0				; jump if it should be 0
+
+	%sda_flt							; SDA = 1
+	sjmp	w2_oc_wait					; go clock data
+
+w2_oc_0:
+
+	%sda_low							; SDA = 0
+
+w2_oc_wait:
+
+	%wait4								; WAIT 4 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait10								; WAIT 10 microseconds
+
+	addb	r0, <r0						; shift next bit left into bit 7
+
+	djnz	r1, w2_out_cmd				; loop for 8 bits
+
+; ---------------------------------------------------------------------------
+; wait for acknowledge
+;
+; assumes:	SCL = 1		SDA = x
+; leaves:	SCL = 1		SDA = x  (S/B 1 from slave)
+; ---------------------------------------------------------------------------
+
+	%scl0								; SCL = 0
+
+	%wait4								; WAIT 4 microseconds
+
+	%sda_flt							; float SDA
+
+	%wait5								; WAIT 5 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait3								; WAIT 3 microseconds
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w2_ack_ok2			; jump if ACK ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w2_ack_ok2			; jump if ACK ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w2_ack_ok2			; jump if ack ok  (SDA = 0)
+
+	sjmp	w2_abort					; abort if no ACK received  (SDA = 1)
+
+w2_ack_ok2:
+
+	%wait5								; WAIT 5 microseconds
+
+; ---------------------------------------------------------------------------
+; stop
+;
+; assumes:	SCL = 1		SDA = x
+; leaves:	SCL = 1		SDA = 1
+; ---------------------------------------------------------------------------
+
+w2_abort:
+
+	%stop								; STOP QuadPot bus
+
+	pop		r2							; restore registers
+	pop		r0
+
+	ret									; return to caller
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	wqpot3() -- write a 3-byte command to a quadpot
+;+;
+;+;	Prototype:
+;+;
+;+;		void wqpot3(pot, cmd, val)
+;+;		WORD pot;	pot address
+;+;		WORD cmd;	pot command
+;+;		WORD val;	pot value
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ---------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษออออออออออป
+; 	 6 บ val  arg บ		000H..03FH	pot value  (we only use the low 6 bits)
+; 	   ฬออออออออออน
+; 	 4 บ cmd  arg บ		000H..0FFH	pot command		iiii pp rr
+; 	   ฬออออออออออน
+; 	 2 บ pot  arg บ		050H..053H	pot address		0101 00 pp
+; 	   ฬออออออออออน
+; 	 0 บ RETURN   บ
+; 	   ศออออออออออผ
+; ---------------------------------------------------------------------------
+
+wq3_pot		equ		6		; pot argument stack offset
+wq3_cmd		equ		8		; cmd argument stack offset
+wq3_val		equ		10		; val argument stack offset
+
+; ---------------------------------------------------------------------------
+
+	public	wqpot3			; void wqpot3(pot, cmd, val)
+
+wqpot3:
+
+	push	r0							; save registers
+	push	r2
+
+; ---------------------------------------------------------------------------
+; Stack at this point:
+;
+; 	   ษออออออออออป
+; 	10 บ val  arg บ		000H..03FH	pot value  (we only use the low 6 bits)
+; 	   ฬออออออออออน
+; 	 8 บ cmd  arg บ		000H..0FFH	pot command		iiii pp rr
+; 	   ฬออออออออออน
+; 	 6 บ pot  arg บ		050H..053H	pot address		0101 00 pp
+; 	   ฬออออออออออน
+; 	 4 บ RETURN   บ
+; 	   ฬออออออออออน
+; 	 2 บ r0 image บ
+; 	   ฬออออออออออน
+; 	 0 บ r2 image บ
+; 	   ศออออออออออผ
+; ---------------------------------------------------------------------------
+
+	or		diagmode, #0100H			; kill ENVs, LFOs, etc.
+
+; ---------------------------------------------------------------------------
+; prepare QuadPot bus for output
+;
+; assumes:	SCL = x		SDA = x
+; leaves:	SCL = 0		SDA = 0
+; ---------------------------------------------------------------------------
+
+	%start								; START QuadPot bus
+
+; ---------------------------------------------------------------------------
+; setup pot address byte to output
+; ---------------------------------------------------------------------------
+
+	ldb		r0, wq3_pot[sp]				; get the pot address
+	ldb		r1, #8						; set the bit counter
+
+; ---------------------------------------------------------------------------
+; output address byte
+;
+; assumes:		SCL = 0		SDA = x
+; leaves:		SCL = 0		SDA = x
+; ---------------------------------------------------------------------------
+
+w3_out_adr:
+
+	%scl0								; SCL = 0
+
+	%wait4								; WAIT 4 microseconds
+
+	jbc		r0, 7, w3_oa_0				; jump if it should be 0
+
+	%sda_flt							; SDA = 1
+	sjmp	w3_oa_wait					; go clock data
+
+w3_oa_0:
+
+	%sda_low							; SDA = 0
+
+w3_oa_wait:
+
+	%wait4								; WAIT 4 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait10								; WAIT 10 microseconds
+
+	addb	r0, <r0						; shift next bit left into bit 7
+
+	djnz	r1, w3_out_adr				; loop for 8 bits
+
+; ---------------------------------------------------------------------------
+; wait for acknowledge
+;
+; assumes:	SCL = 0		SDA = x
+; leaves:	SCL = 0		SDA = 0
+; ---------------------------------------------------------------------------
+
+	%scl0
+
+	%wait4								; WAIT 4 microseconds
+
+	%sda_flt							; float SDA
+
+	%wait5								; WAIT 5 microseconds for slave ACK
+
+	%scl1								; SCL = 1
+
+	%wait3								; WAIT 3 microseconds
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok1			; jump if ack ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok1			; jump if ack ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok1			; jump if ack ok  (SDA = 0)
+
+	sjmp	w3_abort					; abort if no ack received  (SDA = 1)
+
+w3_ack_ok1:
+
+	%wait5								; WAIT 5 microseconds
+
+; ---------------------------------------------------------------------------
+; setup pot command byte to output
+; ---------------------------------------------------------------------------
+
+	ldb		r0, wq3_cmd[sp]				; get the pot command byte
+	ldb		r1, #8						; set the bit counter
+
+; ---------------------------------------------------------------------------
+; output command byte
+;
+; assumes:		SCL = 0		SDA = x
+; leaves:		SCL = 0		SDA = x
+; ---------------------------------------------------------------------------
+
+w3_out_cmd:
+
+	%scl0								; SCL = 0
+
+	%wait4								; WAIT 4 microseconds
+
+	jbc		r0, 7, w3_oc_0				; jump if it should be 0
+
+	%sda_flt							; SDA = 1
+	sjmp	w3_oc_wait					; go clock data
+
+w3_oc_0:
+
+	%sda_low							; SDA = 0
+
+w3_oc_wait:
+
+	%wait4								; WAIT 4 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait10								; WAIT 10 microseconds
+
+	addb	r0, <r0						; shift next bit left into bit 7
+	
+	djnz	r1, w3_out_cmd				; loop for 8 bits
+
+; ---------------------------------------------------------------------------
+; wait for acknowledge
+;
+; assumes:	SCL = 0		SDA = x
+; leaves:	SCL = 0		SDA = 0
+; ---------------------------------------------------------------------------
+
+	%scl0
+
+	%wait4								; WAIT 4 microseconds
+
+	%sda_flt							; float SDA
+
+	%wait5								; WAIT 5 microseconds for slave ACK
+
+	%scl1								; SCL = 1
+
+	%wait3								; WAIT 3 microseconds
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok2			; jump if ack ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok2			; jump if ack ok  (SDA = 0)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok2			; jump if ack ok  (SDA = 0)
+
+	sjmp	w3_abort					; abort if no ack received  (SDA = 1)
+
+w3_ack_ok2:
+
+	%wait5								; WAIT 5 microseconds
+
+; ---------------------------------------------------------------------------
+; setup pot value byte to output
+; ---------------------------------------------------------------------------
+
+	ldb		r0, wq3_val[sp]				; get the pot value byte
+	ldb		r1, #8						; set the bit counter
+
+; ---------------------------------------------------------------------------
+; output data byte
+;
+; assumes:		SCL = 1		SDA = x
+; leaves:		SCL = 1		SDA = x
+; ---------------------------------------------------------------------------
+
+w3_out_dat:
+
+	%scl0								; SCL = 0
+
+	%wait4								; WAIT 4 microseconds
+
+	jbc		r0, 7, w3_od_0				; jump if it should be 0
+
+	%sda_flt							; SDA = 1
+	sjmp	w3_od_wait					; go clock data
+
+w3_od_0:
+
+	%sda_low							; SDA = 0
+
+w3_od_wait:
+
+	%wait4								; WAIT 4 microseconds
+
+	%scl1								; SCL = 1
+
+	%wait10								; WAIT 10 microseconds
+
+	addb	r0, <r0						; shift next bit left into bit 7
+
+	djnz	r1, w3_out_dat				; loop for 8 bits
+
+; ---------------------------------------------------------------------------
+; wait for acknowledge
+;
+; assumes:	SCL = 1		SDA = x
+; leaves:	SCL = 1		SDA = x  (S/B 1 from slave)
+; ---------------------------------------------------------------------------
+
+	%scl0
+
+	%wait4								; WAIT 4 microseconds
+
+	%sda_flt							; float SDA
+
+	%wait5								; WAIT 5 microseconds for slave ACK
+
+	%scl1								; SCL = 1
+
+	%wait3								; WAIT 3 microseconds
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok3			; abort if no ack  (SDA = 1)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok3			; abort if no ack  (SDA = 1)
+
+	ldb		r2, HSI_STATUS				; get SDA (HSI.3)
+
+	jbc		r2, 7, w3_ack_ok3			; abort if no ack  (SDA = 1)
+
+	sjmp	w3_abort
+
+w3_ack_ok3:
+
+	%wait5								; WAIT 5 microseconds
+
+; ---------------------------------------------------------------------------
+; stop
+;
+; assumes:	SCL = 1		SDA = x
+; leaves:	SCL = 1		SDA = 1		SDA disabled
+; ---------------------------------------------------------------------------
+
+w3_abort:
+
+	%stop								; STOP QuadPot bus
+
+	and		diagmode, #00FFH			; enable ENVs, LFOs, etc.
+
+	pop		r2							; restore registers
+	pop		r0
+
+	ret									; return to caller
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	setpots() -- set QuadPot data registers from wiper registers
+;+;
+;+;	Prototype:
+;+;
+;+;		void setpots()
+;+;
+;+;	Calls:
+;+;
+;+;		wqpot2()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	setpots			; void setpots()
+
+setpots:
+
+	ld		r0, #QP_JAM					; pot command
+	push	r0
+
+	ld		r0, #QP_A					; pot address
+	push	r0
+
+	lcall	wqpot2						; wqpot2(QP_A, QP_JAM)
+	add		sp, #4
+
+	%mswait	QP_TIME						; WAIT for store to occur
+
+	ld		r0, #QP_JAM					; pot command
+	push	r0
+
+	ld		r0, #QP_B					; pot address
+	push	r0
+
+	lcall	wqpot2						; wqpot2(QP_B, QP_JAM)
+	add		sp, #4
+
+	%mswait	QP_TIME						; WAIT for store to occur
+
+	ld		r0, #QP_JAM					; pot command
+	push	r0
+
+	ld		r0, #QP_C					; pot address
+	push	r0
+
+	lcall	wqpot2						; wqpot2(QP_C, QP_JAM)
+	add		sp, #4
+
+	%mswait	QP_TIME						; WAIT for store to occur
+
+	ld		r0, #QP_JAM					; pot command
+	push	r0
+
+	ld		r0, #QP_D					; pot address
+	push	r0
+
+	lcall	wqpot2						; wqpot2(QP_D, QP_JAM)
+	add		sp, #4
+
+	%mswait	QP_TIME						; WAIT for store to occur
+
+	ret
+
+; --- The End ---------------------------------------------------------------
+
+	end

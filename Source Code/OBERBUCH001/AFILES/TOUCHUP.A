@@ -1,0 +1,434 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		TOUCHUP.A
+;+;	Purpose:	OB-MX automatic tuning touch-up function
+;+;	Original:		1994-05-16	D.N. Lynx Crowe
+;+;	Revision:	12	1994-06-13	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		touchup()		adjust final VCO tuning
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+;	{Ch 1}	1994-05-18	D.N. Lynx Crowe
+;+;	{Ch 1}	corrected shift instruction in calculations, also optimized code.
+
+;+; {Ch 2}	1994-05-18	D.N. Lynx Crowe
+;+;	{Ch 2}	changed initialization order of HSI and variables
+
+;+;	{Ch 3}	1994-05-19	D.N. Lynx Crowe
+;+;	{Ch 3}	modified timing logic to use timer 1
+
+;+;	{Ch 4}	1994-05-19	D.N. Lynx Crowe
+;+;	{Ch 4}	major change to logic - switched to other touchup scheme
+
+;+;	{Ch 5}	1994-05-19	D.N. Lynx Crowe
+;+;	{Ch 5}	corrected calculation error
+
+;+;	{Ch 6}	1994-05-19	D.N. Lynx Crowe
+;+;	{Ch 6}	added code for lengthened period measurement
+
+;+;	{Ch 7}	1994-06-10	D.N. Lynx Crowe
+;+;	{Ch 7}	corrected CV setups to match tune.a
+
+;+;	{Ch 8}	1994-06-13	D.N. Lynx Crowe
+;+;	{Ch 8}	adjusted offset correction factor, and corrected calculations
+
+;+;	{Ch 9}	1994-06-13	D.N. Lynx Crowe
+;+;	{Ch 9}	added corrections for systematic errors
+
+	name    touchup
+
+	lstout-
+
+$REG8096.INC
+$TUNER.INC
+$TUNECVS.INC
+
+	lstout+
+	locsym+
+	lstmac-
+	lstcnd+
+
+	extern	hsigo
+	extern	limit
+
+	extern	a_v1_e2
+	extern	a_v2_e2
+	extern	b_v1_e2
+	extern	b_v2_e2
+
+	extern	a_v1_offy
+	extern	a_v2_offy
+	extern	b_v1_offy
+	extern	b_v2_offy
+
+	extern	a_v1_off
+	extern	a_v2_off
+	extern	a_mm_off
+	extern	a_ob_off
+
+	extern	b_v1_off
+	extern	b_v2_off
+	extern	b_mm_off
+	extern	b_ob_off
+
+	extern	a_v1_scl
+	extern	a_v2_scl
+	extern	a_mm_scl
+	extern	a_ob_scl
+
+	extern	b_v1_scl
+	extern	b_v2_scl
+	extern	b_mm_scl
+	extern	b_ob_scl
+
+	extern	cvtable
+
+	extern	hsicount
+	extern	hsiflags
+	extern	hsi_isw
+	extern	hsi0_val
+	extern	hsi1_val
+	extern	hsi2_val
+	extern	hsi3_val
+
+	extern	prod1
+	extern	prod2
+
+	extern	r_mstime
+	extern	r_ptrs
+
+;+ ---------------------------------------------------------------------------
+
+CF_OFF		equ		34			; offset correction scaling factor
+
+TUNECON		equ		0083AH		; pitch to tune at  (F4+82 Cents)
+
+TUNETIME	equ		2000		; HSI acquisition timeout (3ms ticks)
+
+CENTS		equ		500			; approximate error equivalent of 1 cent
+
+;+ ---------------------------------------------------------------------------
+
+A_V1_CORR	equ		4*CENTS		; systematic correction - Voice A VCO1
+A_V2_CORR	equ		2*CENTS		; systematic correction - Voice A VCO2
+
+B_V1_CORR	equ		3*CENTS		; systematic correction - Voice B VCO1
+B_V2_CORR	equ		1*CENTS		; systematic correction - Voice B VCO2
+
+;+ ---------------------------------------------------------------------------
+
+r_t0		equ		TEMP		; WORD -- temporary
+r_t2		equ		TEMP+2		; WORD -- temporary
+r_t4		equ		TEMP+4		; WORD -- temporary
+r_t6		equ		TEMP+6		; WORD -- temporary
+
+r_e2		equ		TEMP		; WORD -- error at F2
+
+r_mul		equ		r_ptrs		; [ 0] product register (lower WORD)
+r_res		equ		r_ptrs+2	; [ 2] product register (upper WORD)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ %mswait -- macro to wait n*3 milliseconds
+;+ ---------------------------------------------------------------------------
+;+ This macro depends on timer_isr() decrementing r_mstime for its timing.
+;+ ---------------------------------------------------------------------------
+
+	macro	%mswait			; <msec>
+
+	ld		r_mstime, \0
+
+msw_\@:
+
+	or		r_mstime, <r_mstime
+	jne		msw_\<
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %setvco -- macro to setup VCO pitches and scale factors
+;+ ---------------------------------------------------------------------------
+;+
+;+	cvtable[x_PITCH] = pitch + x_off
+;+	cvtable[x_SCALE] = 0x0800 + x_scl
+;+
+;+ Trashes:  r0, r2
+;+ ---------------------------------------------------------------------------
+
+	macro	%setvco		; <pitch>
+
+	ld		r0, \0							; setup the VCO pitches
+
+	add		r2, r0, a_v1_off
+	lcall	limit
+	st		r2, cvtable+A_VCO1_PITCH		; ... for A_VCO1
+
+	add		r2, r0, a_v2_off
+	lcall	limit
+	st		r2, cvtable+A_VCO2_PITCH		; ... for A_VCO2
+
+	add		r2, r0, b_v1_off
+	lcall	limit
+	st		r2, cvtable+B_VCO1_PITCH		; ... for B_VCO1
+
+	add		r2, r0, b_v2_off
+	lcall	limit
+	st		r2, cvtable+B_VCO2_PITCH		; ... for B_VCO2
+
+	ld		r0, #0800H						; setup the VCO scale factors
+
+	add		r2, r0, a_v1_scl
+	lcall	limit
+	st		r2, cvtable+A_VCO1_SCALE		; ... for A_VCO1
+
+	add		r2, r0, a_v2_scl
+	lcall	limit
+	st		r2, cvtable+A_VCO2_SCALE		; ... for A_VCO2
+
+	add		r2, r0, b_v1_scl
+	lcall	limit
+	st		r2, cvtable+B_VCO1_SCALE		; ... for B_VCO1
+
+	add		r2, r0, b_v2_scl
+	lcall	limit
+	st		r2, cvtable+B_VCO2_SCALE		; ... for B_VCO2
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %calc -- macro to calculate offset and scale factor adjustments
+;+ ---------------------------------------------------------------------------
+;+
+;+	x_offy = - (x_e2 + x_e6) * cfoff;
+;+
+;+ trashes:
+;+
+;+			r_t4, r_t6,
+;+ 
+;+			r_t0, which is shared by r_e2, and
+;+
+;+			r_mul, r_res which are shared by
+;+
+;+				r_test, r_tstat, and
+;+				r_srcw, r_dstw, and
+;+				r_ptrs, respectively
+;+ ---------------------------------------------------------------------------
+
+	macro	%calc			; <target>
+
+	ld		r_e2, \0_e2				; get E2
+	mul		r_mul, r_e2, cfoff		; calculate E2 * CFOFF
+	neg		r_res					; negate high word of result
+	st		r_res, \0_offy			; store offset adjustment
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %adj_o -- macro to adjust offset:	off += offx
+;+ ---------------------------------------------------------------------------
+;+
+;+ Trashes:  r2
+;+
+;+		x_off += x_offy;			/* ... adjust offset */
+;+
+;+ ---------------------------------------------------------------------------
+
+	macro	%adj_o		; <target>
+
+	ld		r2, \0_off					; adjust offset
+	add		r2, \0_offy
+	st		r2, \0_off
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	touchup() -- final VCO tuning adjustment
+;+;
+;+;	Prototype:
+;+;
+;+;		void touchup()
+;+;
+;+;	Calls:
+;+;
+;+;		hsi_go()
+;+;
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	touchup
+
+touchup:
+
+; ---------------------------------------------------------------------------
+; prepare CVs for VCO measurements:
+;
+;	MM_IN1		 60
+;	MM_IN2		  0
+;	MM_NOISE	  0
+;
+;	OB_IN1		  0
+;	OB_IN2		100
+;	OB_NOISE	  0
+;
+;	MM_RESON	  0
+;	OB_RESON	  0
+;
+;	VCO1_FM		  0
+;	VCO2_FM		  0
+;
+;	VCO1_PW		 50
+;	VCO2_PW		 50
+;
+;	MM_FREQ		0x0CFF
+;	OB_FREQ		0x0CFF
+; ---------------------------------------------------------------------------
+
+	clr		r0								; things that need to be 0
+
+	st		r0, cvtable+A_MM_IN2
+	st		r0, cvtable+A_OB_IN1
+	st		r0, cvtable+B_MM_IN2
+	st		r0, cvtable+B_OB_IN1
+
+	st		r0, cvtable+A_MM_NOISE
+	st		r0, cvtable+A_VCO1_FM
+	st		r0, cvtable+A_VCO2_FM
+	st		r0, cvtable+A_OB_NOISE
+
+	st		r0, cvtable+B_MM_NOISE
+	st		r0, cvtable+B_VCO1_FM
+	st		r0, cvtable+B_VCO2_FM
+	st		r0, cvtable+B_OB_NOISE
+
+	ld		r0, #07FFH						; things that need to be 70
+
+	st		r0, cvtable+A_VCO1_PW
+	st		r0, cvtable+B_VCO1_PW
+	st		r0, cvtable+A_VCO2_PW
+	st		r0, cvtable+B_VCO2_PW
+
+	ld		r0, #0999H						; things that need to be 60
+
+	st		r0, cvtable+A_MM_IN1
+	st		r0, cvtable+A_OB_IN2
+
+	ld		r0, #0FFFH						; things that need to be 100
+
+	st		r0, cvtable+B_MM_IN1
+	st		r0, cvtable+B_OB_IN2
+
+
+	ld		r0, #0							; adjusted filter resonances
+
+	st		r0, cvtable+A_OB_RESON
+	st		r0, cvtable+B_OB_RESON
+	st		r0, cvtable+A_MM_RESON
+	st		r0, cvtable+B_MM_RESON
+
+	ld		r0, #0CFFH						; adjust filter frequencies
+ 
+	st		r0, cvtable+A_MM_FREQ
+	st		r0, cvtable+A_OB_FREQ
+	st		r0, cvtable+B_MM_FREQ
+	st		r0, cvtable+B_OB_FREQ
+
+; ---------------------------------------------------------------------------
+; set VCO pitches to MID  (F4+82 cents)
+; ---------------------------------------------------------------------------
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #023H				; prescale by 16 (HSO.3 = 1)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	%setvco	#TUNECON						; setup the MID tuning pitch
+	%mswait	#20								; wait for VCOs to stabilize
+
+; ---------------------------------------------------------------------------
+; start the VCO MID HSI measurement cycle
+; ---------------------------------------------------------------------------
+
+	ld		hsi_isw, #1						; set to measure 32 periods
+
+	lcall	hsigo							; start the HSI cycle
+
+; ---------------------------------------------------------------------------
+; WAIT for the VCO measurements to be made or a timeout to occur
+; ---------------------------------------------------------------------------
+
+ti_wait1:
+
+	cmpb	hsiflags, #0FFH					; see if we've got readings yet
+	je		ti_meas1						; jump if so
+
+	cmp		hsicount, #TUNETIME				; see if we've waited long enough
+	jnh		ti_wait1						; loop if not
+
+; ---------------------------------------------------------------------------
+; take the VCO MID readings and store them for the calculation phase
+; ---------------------------------------------------------------------------
+
+ti_meas1:
+
+	andb	INT_MASK, #not(BIT2)			; clear HSI DAV interrupt enable
+
+	add		hsi0_val, a_v1_corr
+	st		hsi0_val, a_v1_e2				; a_v1_e2 = hsi0_val + a_v1_corr
+
+	add		hsi1_val, a_v2_corr
+	st		hsi1_val, a_v2_e2				; a_v2_e2 = hsi1_val + a_v2_corr
+
+	add		hsi2_val, b_v1_corr
+	st		hsi2_val, b_v1_e2				; b_v1_e2 = hsi2_val + b_v1_corr
+
+	add		hsi3_val, b_v2_corr
+	st		hsi3_val, b_v2_e2				; b_v2_e2 = hsi3_val + b_v2_corr
+
+; ---------------------------------------------------------------------------
+; calculate final offset corrections (_offy)
+; ---------------------------------------------------------------------------
+
+	%calc	a_v1						; VCOs
+	%calc	a_v2
+	%calc	b_v1
+	%calc	b_v2
+
+; ---------------------------------------------------------------------------
+; adjust final offsets (_off)
+; ---------------------------------------------------------------------------
+
+	%adj_o	a_v1						; adjust VCO offsets
+	%adj_o	a_v2
+	%adj_o	b_v1
+	%adj_o	b_v2
+
+	ret									; return to caller
+
+; ----------------------------------------------------------------------------
+
+			public	cfoff
+
+cfoff:		dcw		CF_OFF				; scaling constant for offset
+
+; ----------------------------------------------------------------------------
+
+			public	a_v1_corr
+			public	a_v2_corr
+			public	b_v1_corr
+			public	b_v2_corr
+
+a_v1_corr:	dcw		A_V1_CORR
+a_v2_corr:	dcw		A_V2_CORR
+b_v1_corr:	dcw		B_V1_CORR
+b_v2_corr:	dcw		B_V2_CORR
+
+; The End --------------------------------------------------------------------
+
+	end

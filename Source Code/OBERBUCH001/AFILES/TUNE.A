@@ -1,0 +1,2080 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		TUNE.A
+;+;	Purpose:	OB-MX automatic tuning functions
+;+;	Original:		1993-06-07	D.N. Lynx Crowe
+;+;	Revision:	106	1994-06-13	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		hsigo()			start a HSI measurement cycle
+;+;		tuner()			tune the oscillators and filters
+;+;
+;+;		hsi_dav_isr		hsi data available interrupt service routine
+;+;
+;+; WARNING:  This module used so many labels that adding any more would
+;+;	cause the assembler to crash!  (usually with a stack overflow...)
+;+;
+;+;	To solve the label table overflow problem, TUNE.A includes TUNER.INC
+;+;	instead of VOICE.INC to define only the constants it really needs.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+;	{Ch 1}	1994-05-17	D.N. Lynx Crowe
+;+;	{Ch 1}	changed includes, updated comments, and added call to touchup()
+
+;+;	{Ch 2}	1994-05-19	D.N. Lynx Crowe
+;+;	{Ch 2}	removed hsi_isw
+
+;+;	{Ch 3}	1994-05-19	D.N. Lynx Crowe
+;+;	{Ch 3}	modified hsi_dav_isr for 1 or 32 count window based on hsi_isw
+
+;+;	{Ch 4}	1994-05-25	D.N. Lynx Crowe
+;+;	{Ch 4}	added snap code for debugging
+
+;+;	{Ch 5}	1994-06-02	D.N. Lynx Crowe
+;+;	{Ch 5}	added ALWAYS flag to cause retuning from scratch each time
+
+;+;	{Ch 6}	1994-06-03	D.N. Lynx Crowe
+;+;	{Ch 6}	changed use of intune to control SIO interrupts
+
+;+;	{Ch 7}	1994-06-03	D.N. Lynx Crowe
+;+;	{Ch 7}	disabled SIO interrupts
+
+;+;	{Ch 8}	1994-06-07	D.N. Lynx Crowe
+;+;	{Ch 8}	made more space and added conditional assembly options
+
+;+;	{Ch 9}	1994-06-07	D.N. Lynx Crowe
+;+;	{Ch 9}	changed wait time from 60 to 96 ms
+
+;+;	{Ch 10}	1994-06-07	D.N. Lynx Crowe
+;+;	{Ch 10}	changed snap variables to concentrate on hsi0
+
+;+;	{Ch 11}	1994-06-07	D.N. Lynx Crowe
+;+;	{Ch 11}	added code to disable HSI inputs and interrupts at EOD
+
+;+;	{Ch 12}	1994-06-08	D.N. Lynx Crowe
+;+;	{Ch 12}	added more snap code
+
+;+;	{Ch 13}	1994-06-09	D.N. Lynx Crowe
+;+;	{Ch 13}	changed routing CV setup
+
+;+;	{Ch 14}	1994-06-09	D.N. Lynx Crowe
+;+;	{Ch 14}	changed initial stabilization time
+
+;+;	{Ch 15}	1994-06-09	D.N. Lynx Crowe
+;+;	{Ch 15}	restored touchup()
+
+;+;	{Ch 16}	1994-06-13	D.N. Lynx Crowe
+;+;	{Ch 16}	optimized hsi_dav_isr()
+
+;+;	{Ch 17}	1994-06-13	D.N. Lynx Crowe
+;+;	{Ch 17}	corrected HSI divisor for touchup
+
+;+;	{Ch 17}	1994-06-14	D.N. Lynx Crowe
+;+;	{Ch 17}	corrected scale factors
+
+	name    tune
+
+	lstout-
+
+$REG8096.INC
+$TUNER.INC
+$TUNECVS.INC
+
+	lstout+
+	locsym+
+	lstmac-
+	lstcnd+
+
+;+ ---------------------------------------------------------------------------
+
+SNAPIT			equ		0			;- enables snap() and init_snap() usage
+
+DEBUG_TUN		equ		0			;- snap tuning variables
+
+DEBUG_HSI		equ		0			;- snap hsi variables
+
+DEBUG_CVT		equ		0			;- snap cvtable entries
+
+ALWAYS			equ		0			; always tune as from power up
+
+DISINT			equ		0			; disable interrupts if non-zero
+
+WAIT_IPC		equ		0			; wait for ipc message
+
+;+ ---------------------------------------------------------------------------
+
+	extern	flush_hsi
+
+	if		WAIT_IPC
+	extern	ipc_wait
+	endif	; WAIT_IPC
+
+	extern	set_adj
+
+	extern	ctltable
+	extern	cvtable
+	extern	hsi_isw
+	extern	ioc0_img
+	extern	ioc1_img
+	extern	intune
+	extern	r_mstime
+	extern	stwat_flag
+	extern	v
+
+	extern	limit
+	extern	touchup
+
+	if		SNAPIT
+	extern	snap
+	extern	init_snap
+	extern	snaplog
+	endif	; SNAPIT
+
+;+ ---------------------------------------------------------------------------
+
+T_INIT			equ		20			; initial stabilization time
+T_STABLE		equ		4			; subsequent stabilization time
+
+HSIDIV			equ		4			; HSI divisor for touchup
+
+;+ ---------------------------------------------------------------------------
+
+TUNEMAX			equ		16			; maximum number of times to try tuning
+
+;+ ---------------------------------------------------------------------------
+;+ NOTES:
+;+
+;+	TUNEMAX must be LE 255, as it's referenced by an LDBZE	r0, #TUNEMAX
+;+
+;+	TUNEMAX is used for initial tuning on power up,
+;+	TUNEMAX/2 is used for subsequent tunings.
+;+ ---------------------------------------------------------------------------
+
+HSI_DSBL	equ		10101010B		; HSI disable mask	(AND with IOC0)
+
+; ----------------------------------------------------------------------------
+; bit masks
+; ----------------------------------------------------------------------------
+
+BITA0			equ		00000001B	; bit mask for first reading of HSI.0
+BITA1			equ		00000010B	; bit mask for first reading of HSI.1
+BITA2			equ		00000100B	; bit mask for first reading of HSI.2
+BITA3			equ		00001000B	; bit mask for first reading of HSI.3
+
+BITB0			equ		00010000B	; bit mask for second reading of HSI.0
+BITB1			equ		00100000B	; bit mask for second reading of HSI.1
+BITB2			equ		01000000B	; bit mask for second reading of HSI.2
+BITB3			equ		10000000B	; bit mask for second reading of HSI.3
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	aregs(2)			; REGISTERS -- 22 bytes -- LOCALS (tune.a)
+
+;+ ---------------------------------------------------------------------------
+
+	public	r_ptrs
+
+;+ ---------------------------------------------------------------------------
+;+ WARNING: r_ptrs is shared with:
+;+
+;+	r_srcw, r_dstw, r_mul, r_res, r_test, r_tstat
+;+ ---------------------------------------------------------------------------
+
+r_ptrs:		dsl		1			; [ 0] bmov pointers (see note above):
+
+r_srcw		equ		r_ptrs		; [ 0] bmov source pointer
+r_dstw		equ		r_ptrs+2	; [ 2] bmov destination pointer
+
+r_mul		equ		r_ptrs		; [ 0] product register (lower WORD)
+r_res		equ		r_ptrs+2	; [ 2] product register (upper WORD)
+
+r_test		equ		r_ptrs		; [ 0] temporary for testing
+r_tstat		equ		r_ptrs+2	; [ 2] tuning status temporary
+
+;+ ---------------------------------------------------------------------------
+
+r_wcnt:		dsw		1			; bmov word count
+
+;+ ---------------------------------------------------------------------------
+
+	public	tunetry				; VAR in aregs	WORD
+
+	public	hsicount			; VAR in aregs	WORD
+	public	hsiflags			; VAR in aregs	WORD
+
+	public	hsi0_cnt			; VAR in aregs	WORD
+	public	hsi1_cnt			; VAR in aregs	WORD
+	public	hsi2_cnt			; VAR in aregs	WORD
+	public	hsi3_cnt			; VAR in aregs	WORD
+
+	public	r_stat				; VAR in aregs	WORD
+	public	r_time				; VAR in aregs	WORD
+
+	public	hsi0_val			; VAR in aregs	WORD
+	public	hsi1_val			; VAR in aregs	WORD
+	public	hsi2_val			; VAR in aregs	WORD
+	public	hsi3_val			; VAR in aregs	WORD
+
+	public	hsi0_last			; VAR in aregs	WORD
+	public	hsi1_last			; VAR in aregs	WORD
+	public	hsi2_last			; VAR in aregs	WORD
+	public	hsi3_last			; VAR in aregs	WORD
+
+tunetry:	dsw		1			; tuning try counter
+
+r_stat:		dsw		1			; HSI status image
+r_time:		dsw		1			; HSI time image
+
+hsicount:	dsw		1			; HSI try timer  (updated by timer_isr)
+hsiflags:	dsw		1			; HSI reading status
+
+hsi0_cnt:	dsb		1			; HSI.0 period count
+hsi1_cnt:	dsb		1			; HSI.0 period count
+hsi2_cnt:	dsb		1			; HSI.0 period count
+hsi3_cnt:	dsb		1			; HSI.0 period count
+
+hsi0_val:	dsw		1			; HSI.0 -- A VCO1/MM period error
+hsi1_val:	dsw		1			; HSI.1 -- A VCO2/OB period error
+hsi2_val:	dsw		1			; HSI.2 -- B VCO1/MM period error
+hsi3_val:	dsw		1			; HSI.3 -- B VCO2/OB period error
+
+hsi0_last:	dsw		1			; HSI.0 -- A VCO1/MM last reading
+hsi1_last:	dsw		1			; HSI.1 -- A VCO2/OB last reading
+hsi2_last:	dsw		1			; HSI.2 -- B VCO1/MM last reading
+hsi3_last:	dsw		1			; HSI.3 -- B VCO2/OB last reading
+
+;+ ---------------------------------------------------------------------------
+
+r_t0		equ		TEMP		; WORD -- temporary
+r_t2		equ		TEMP+2		; WORD -- temporary
+r_t4		equ		TEMP+4		; WORD -- temporary
+r_t6		equ		TEMP+6		; WORD -- temporary
+
+r_e2		equ		TEMP		; WORD -- error at F2
+r_e6		equ		TEMP+2		; WORD -- error at F6
+r_pr1		equ		TEMP+4		; WORD -- product temporary
+r_pr2		equ		TEMP+6		; WORD -- product temporary
+
+;+ ---------------------------------------------------------------------------
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	adata(1)
+
+;+ ---------------------------------------------------------------------------
+
+	public	cvsave				; VAR in adata	WORD [64]
+
+cvsave:		dsw		64			; cvtable[] save area
+
+;+ ---------------------------------------------------------------------------
+;+ WARNING: tune_vars through tune_save are ORDER DEPENDENT.  DO NOT CHANGE.
+;+ Length: 16 WORDs.  These are saved and restored for diagnostics.
+;+ ---------------------------------------------------------------------------
+
+	public	tune_vars			; VAR in adata	WORD[16]
+
+	public	a_v1_off			; VAR in adata	WORD
+	public	a_v2_off			; VAR in adata	WORD
+	public	a_mm_off			; VAR in adata	WORD
+	public	a_ob_off			; VAR in adata	WORD
+
+	public	b_v1_off			; VAR in adata	WORD
+	public	b_v2_off			; VAR in adata	WORD
+	public	b_mm_off			; VAR in adata	WORD
+	public	b_ob_off			; VAR in adata	WORD
+
+	public	a_v1_scl			; VAR in adata	WORD
+	public	a_v2_scl			; VAR in adata	WORD
+	public	a_mm_scl			; VAR in adata	WORD
+	public	a_ob_scl			; VAR in adata	WORD
+
+	public	b_v1_scl			; VAR in adata	WORD
+	public	b_v2_scl			; VAR in adata	WORD
+	public	b_mm_scl			; VAR in adata	WORD
+	public	b_ob_scl			; VAR in adata	WORD
+
+	public	tune_save			; VAR in adata	WORD[16]
+
+tune_vars:
+
+a_v1_off:	dsw		1			; [ 0] voice A VCO1 offset
+a_v2_off:	dsw		1			; [ 1] voice A VCO2 offset
+a_mm_off:	dsw		1			; [ 2] voice A MM offset
+a_ob_off:	dsw		1			; [ 3] voice A OB offset
+
+b_v1_off:	dsw		1			; [ 4] voice B VCO1 offset
+b_v2_off:	dsw		1			; [ 5] voice B VCO2 offset
+b_mm_off:	dsw		1			; [ 6] voice B MM offset
+b_ob_off:	dsw		1			; [ 7] voice B OB offset
+
+a_v1_scl:	dsw		1			; [ 8] voice A VCO1 scale factor
+a_v2_scl:	dsw		1			; [ 9] voice A VCO2 scale factor
+a_mm_scl:	dsw		1			; [10] voice A MM scale factor
+a_ob_scl:	dsw		1			; [11] voice A OB scale factor
+
+b_v1_scl:	dsw		1			; [12] voice B VCO1 scale factor
+b_v2_scl:	dsw		1			; [13] voice B VCO2 scale factor
+b_mm_scl:	dsw		1			; [14] voice B MM scale factor
+b_ob_scl:	dsw		1			; [15] voice B OB scale factor
+
+tune_save:	dsw		16			; save area for above variables
+
+;+ ---------------------------------------------------------------------------
+
+	public	a_v1_offy			; VAR in adata	WORD
+	public	a_v2_offy			; VAR in adata	WORD
+	public	a_mm_offy			; VAR in adata	WORD
+	public	a_ob_offy			; VAR in adata	WORD
+
+	public	b_v1_offy			; VAR in adata	WORD
+	public	b_v2_offy			; VAR in adata	WORD
+	public	b_mm_offy			; VAR in adata	WORD
+	public	b_ob_offy			; VAR in adata	WORD
+
+	public	a_v1_scly			; VAR in adata	WORD
+	public	a_v2_scly			; VAR in adata	WORD
+	public	a_mm_scly			; VAR in adata	WORD
+	public	a_ob_scly			; VAR in adata	WORD
+
+	public	b_v1_scly			; VAR in adata	WORD
+	public	b_v2_scly			; VAR in adata	WORD
+	public	b_mm_scly			; VAR in adata	WORD
+	public	b_ob_scly			; VAR in adata	WORD
+
+a_v1_offy:	dsw		1			; current voice A VCO1 offset
+a_v2_offy:	dsw		1			; current voice A VCO2 offset
+a_mm_offy:	dsw		1			; current voice A MM offset
+a_ob_offy:	dsw		1			; current voice A OB offset
+
+b_v1_offy:	dsw		1			; current voice B VCO1 offset
+b_v2_offy:	dsw		1			; current voice B VCO2 offset
+b_mm_offy:	dsw		1			; current voice B MM offset
+b_ob_offy:	dsw		1			; current voice B OB offset
+
+a_v1_scly:	dsw		1			; current voice A VCO1 scale factor
+a_v2_scly:	dsw		1			; current voice A VCO2 scale factor
+a_mm_scly:	dsw		1			; current voice A MM scale factor
+a_ob_scly:	dsw		1			; current voice A OB scale factor
+
+b_v1_scly:	dsw		1			; current voice B VCO1 scale factor
+b_v2_scly:	dsw		1			; current voice B VCO2 scale factor
+b_mm_scly:	dsw		1			; current voice B MM scale factor
+b_ob_scly:	dsw		1			; current voice B OB scale factor
+
+;+ ---------------------------------------------------------------------------
+
+	public	a_v1_e2				; VAR in adata	WORD
+	public	a_v2_e2				; VAR in adata	WORD
+	public	a_mm_e2				; VAR in adata	WORD
+	public	a_ob_e2				; VAR in adata	WORD
+
+	public	b_v1_e2				; VAR in adata	WORD
+	public	b_v2_e2				; VAR in adata	WORD
+	public	b_mm_e2				; VAR in adata	WORD
+	public	b_ob_e2				; VAR in adata	WORD
+
+	public	a_v1_e6				; VAR in adata	WORD
+	public	a_v2_e6				; VAR in adata	WORD
+	public	a_mm_e6				; VAR in adata	WORD
+	public	a_ob_e6				; VAR in adata	WORD
+
+	public	b_v1_e6				; VAR in adata	WORD
+	public	b_v2_e6				; VAR in adata	WORD
+	public	b_mm_e6				; VAR in adata	WORD
+	public	b_ob_e6				; VAR in adata	WORD
+
+a_v1_e2:	dsw		1			; voice A VCO1 F2 error
+a_v2_e2:	dsw		1			; voice A VCO2 F2 error
+a_mm_e2:	dsw		1			; voice A MM VCF F2 error
+a_ob_e2:	dsw		1			; voice A OB VCF F2 error
+
+b_v1_e2:	dsw		1			; voice B VCO1 F2 error
+b_v2_e2:	dsw		1			; voice B VCO2 F2 error
+b_mm_e2:	dsw		1			; voice B MM VCF F2 error
+b_ob_e2:	dsw		1			; voice B OB VCF F2 error
+
+a_v1_e6:	dsw		1			; voice A VCO1 F6 error
+a_v2_e6:	dsw		1			; voice A VCO2 F6 error
+a_mm_e6:	dsw		1			; voice A MM VCF F6 error
+a_ob_e6:	dsw		1			; voice A OB VCF F6 error
+
+b_v1_e6:	dsw		1			; voice B VCO1 F6 error
+b_v2_e6:	dsw		1			; voice B VCO2 F6 error
+b_mm_e6:	dsw		1			; voice B MM VCF F6 error
+b_ob_e6:	dsw		1			; voice B OB VCF F6 error
+
+;+ ---------------------------------------------------------------------------
+
+	public	a_v1_tcnt			; VAR in adata	WORD
+	public	a_v2_tcnt			; VAR in adata	WORD
+	public	a_mm_tcnt			; VAR in adata	WORD
+	public	a_ob_tcnt			; VAR in adata	WORD
+
+	public	b_v1_tcnt			; VAR in adata	WORD
+	public	b_v2_tcnt			; VAR in adata	WORD
+	public	b_mm_tcnt			; VAR in adata	WORD
+	public	b_ob_tcnt			; VAR in adata	WORD
+
+	public	tunemax				; VAR in adata	WORD
+	public	retune				; VAR in adata	WORD
+
+	public	w_time				; VAR in adata	WORD
+
+a_v1_tcnt:	dsw		1			; voice A VCO1 "tuned" counter
+a_v2_tcnt:	dsw		1			; voice A VCO2 "tuned" counter
+a_mm_tcnt:	dsw		1			; voice A MM VCF "tuned" counter
+a_ob_tcnt:	dsw		1			; voice A OB VCF "tuned" counter
+
+b_v1_tcnt:	dsw		1			; voice B VCO1 "tuned" counter
+b_v2_tcnt:	dsw		1			; voice B VCO2 "tuned" counter
+b_mm_tcnt:	dsw		1			; voice B MM VCF "tuned" counter
+b_ob_tcnt:	dsw		1			; voice B OB VCF "tuned" counter
+
+tunemax:	dsw		1			; maximum number of times to try tuning
+retune:		dsw		1			; re-tune flag
+
+w_time:		dsw		1			; stabilization time
+
+;+ ---------------------------------------------------------------------------
+
+	public	prod1
+	public	prod2
+
+prod1:		dsw		1			; low WORD of product
+prod2:		dsw		2			; high WORD of product
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ %mswait -- macro to wait n*3 milliseconds
+;+ ---------------------------------------------------------------------------
+;+ This macro depends on timer_isr() decrementing r_mstime for its timing.
+;+ ---------------------------------------------------------------------------
+
+	macro	%mswait			; <msec>
+
+	ld		r_mstime, \0
+
+msw_\@:
+
+	or		r_mstime, <r_mstime
+	jne		msw_\<
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %hsi_ck -- HSI check and count macro
+;+ ---------------------------------------------------------------------------
+
+	macro	%hsi_ck		; <hsi>
+
+	jbc		r_stat, 2*\0, hsi_cv\0			; jump if HSI.\0 not active
+
+	jbc		hsiflags, \0, hsi_cp\0			; jump if no 1st reading yet
+
+	cmpb	0, hsi\0_cnt					; see if we've counted down to 0
+	jne		hsi_ct\0						; go count down some more if not
+
+	jbs		hsiflags, 4+\0, hsi_cv\0		; done if we've done this before
+
+	orb		hsiflags, #BITB\0				; indicate 2nd reading
+	sub		hsi\0_val, hsi\0_last, <r_time	; val = then - now
+	sjmp	hsi_cv\0						; go check next HSI
+
+hsi_cp\0:
+
+	orb		hsiflags, #BITA\0				; indicate we got 1st reading
+	st		r_time, <hsi\0_last				; then = now
+
+hsi_ct\0:
+
+	decb	hsi\0_cnt						; decrement count
+
+hsi_cv\0:
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %hsi_rd -- HSI read and log macro
+;+ ---------------------------------------------------------------------------
+
+	macro	%hsi_rd		; <hsi>
+
+	jbc		r_stat, 2*\0, hsi_nv\0			; jump if not HSI.\0
+
+	jbc		hsiflags, \0, hsi_np\0			; jump if no reading yet
+
+	orb		hsiflags, #BITB\0				; indicate second reading
+	sub		hsi\0_val, hsi\0_last, <r_time	; val = then - now
+
+hsi_np\0:
+
+	orb		hsiflags, #BITA\0				; indicate we got a reading
+	st		r_time, <hsi\0_last				; then = now
+
+hsi_nv\0:
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %setvco -- macro to setup VCO pitches and scale factors
+;+ ---------------------------------------------------------------------------
+;+
+;+	cvtable[x_PITCH] = pitch + x_off
+;+	cvtable[x_SCALE] = 0x0800 + x_scl
+;+
+;+ Trashes:  r0, r2
+;+ ---------------------------------------------------------------------------
+
+	macro	%setvco		; <pitch>
+
+	ld		r0, \0							; setup the VCO pitches
+
+	add		r2, r0, a_v1_off
+	lcall	limit
+	st		r2, cvtable+A_VCO1_PITCH		; ... for A_VCO1
+
+	add		r2, r0, a_v2_off
+	lcall	limit
+	st		r2, cvtable+A_VCO2_PITCH		; ... for A_VCO2
+
+	add		r2, r0, b_v1_off
+	lcall	limit
+	st		r2, cvtable+B_VCO1_PITCH		; ... for B_VCO1
+
+	add		r2, r0, b_v2_off
+	lcall	limit
+	st		r2, cvtable+B_VCO2_PITCH		; ... for B_VCO2
+
+	ld		r0, #0800H						; setup the VCO scale factors
+
+	add		r2, r0, a_v1_scl
+	lcall	limit
+	st		r2, cvtable+A_VCO1_SCALE		; ... for A_VCO1
+
+	add		r2, r0, a_v2_scl
+	lcall	limit
+	st		r2, cvtable+A_VCO2_SCALE		; ... for A_VCO2
+
+	add		r2, r0, b_v1_scl
+	lcall	limit
+	st		r2, cvtable+B_VCO1_SCALE		; ... for B_VCO1
+
+	add		r2, r0, b_v2_scl
+	lcall	limit
+	st		r2, cvtable+B_VCO2_SCALE		; ... for B_VCO2
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %setvcf -- macro to setup VCF frequencies and scale factors
+;+ ---------------------------------------------------------------------------
+;+
+;+	cvtable[x_FREQ]  = freq + x_off
+;+	cvtable[x_SCALE] = 0x0800 + x_scl
+;+
+;+ Trashes:  r0, r2
+;+ ---------------------------------------------------------------------------
+
+	macro	%setvcf		; <freq>
+
+	ld		r0, \0							; setup the VCF frequencies
+
+	add		r2, r0, a_mm_off
+	lcall	limit
+	st		r2, cvtable+A_MM_FREQ			; ... for A_MM
+
+	add		r2, r0, a_ob_off
+	lcall	limit
+	st		r2, cvtable+A_OB_FREQ			; ... for A_OB
+
+	add		r2, r0, b_mm_off
+	lcall	limit
+	st		r2, cvtable+B_MM_FREQ			; ... for B_MM
+
+	add		r2, r0, b_ob_off
+	lcall	limit
+	st		r2, cvtable+B_OB_FREQ			; ... for B_OB
+
+	ld		r0, #0800H						; setup the VCF scale factors
+
+	add		r2, r0, a_mm_scl
+	lcall	limit
+	st		r2, cvtable+A_MM_SCALE			; ... for A_MM
+
+	add		r2, r0, a_ob_scl
+	lcall	limit
+	st		r2, cvtable+A_OB_SCALE			; ... for A_OB
+
+	add		r2, r0, b_mm_scl
+	lcall	limit
+	st		r2, cvtable+B_MM_SCALE			; ... for B_MM
+
+	add		r2, r0, b_ob_scl
+	lcall	limit
+	st		r2, cvtable+B_OB_SCALE			; ... for B_OB
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %calc -- macro to calculate offset and scale factor adjustments
+;+ ---------------------------------------------------------------------------
+;+
+;+	x_offy = - (x_e2 + x_e6) * cfoff;
+;+
+;+	x_scly =   (x_e2 - x_e6) * cfscl;
+;+
+;+ trashes:
+;+
+;+			r_t4, r_t6,
+;+ 
+;+			r_t0, r_t2, which are shared by:
+;+
+;+				r_e2, r_e6 respectively, and
+;+
+;+			r_mul, r_res which are shared by
+;+
+;+				r_test, r_tstat, and
+;+				r_srcw, r_dstw, and
+;+				r_ptrs, respectively
+;+ ---------------------------------------------------------------------------
+
+	macro	%calc			; <target>
+
+	ld		r_e2, \0_e2				; get E2
+	ld		r_e6, \0_e6				; get E6
+
+	mul		r_mul, r_e2, cfoff		; calculate E2 * CFOFF
+
+	st		r_mul, r_pr1			; store LO WORD of product
+	st		r_res, r_pr2			; store HI WORD of product
+
+	mul		r_mul, r_e6, cfoff		; calculate E6 * CFOFF
+
+	add		r_mul, r_pr1			; (E2 * cfoff) + (E6 * cfoff)
+	addc	r_res, r_pr2
+
+	neg		r_res					; negate high word of result
+
+	st		r_res, \0_offy			; store offset adjustment
+
+	mul		r_mul, r_e6, cfscl		; calculate E6 * CFSCL
+
+	st		r_mul, r_pr1			; store LO WORD of product
+	st		r_res, r_pr2			; store HI WORD of product
+
+	mul		r_mul, r_e2, cfscl		; calculate E2 * CFSCL
+
+	sub		r_mul, r_pr1			; (E2 * cfscl) - (E6 * cfscl)
+	subc	r_res, r_pr2
+
+	st		r_res, \0_scly			; store scale factor adjustment
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %adj_o -- macro to adjust offset:	off += offx
+;+ ---------------------------------------------------------------------------
+;+
+;+ r_tstat must contain the tuning flags for this voice
+;+ Trashes:  r2
+;+
+;+	if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+;+		x_off += x_offy;			/* ... adjust offset */
+;+
+;+ ---------------------------------------------------------------------------
+
+	macro	%adj_o		; <target>, <bit>
+
+	jbs		r_tstat, \1, skip_adjo_\@		; don't adjust if we're tuned
+
+	ld		r2, \0_off					; adjust offset
+	add		r2, \0_offy
+	st		r2, \0_off
+
+skip_adjo_\<:
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %adj_s -- macro to adjust scale factor:	scl += scly
+;+ ---------------------------------------------------------------------------
+;+
+;+ r_tstat must contain the tuning flags for this voice
+;+ Trashes:  r2
+;+
+;+	if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+;+		x_scl += x_scly;			/* ... adjust scale factor */
+;+
+;+ ---------------------------------------------------------------------------
+
+	macro	%adj_s		; <target>, <bit>
+
+	jbs		r_tstat, \1, skip_adjf_\@		; don't adjust if we're tuned
+
+	ld		r2, \0_scl					; adjust scale factor
+	add		r2, \0_scly
+	st		r2, \0_scl
+
+skip_adjf_\<:
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %check -- macro to check for tuning complete
+;+ ---------------------------------------------------------------------------
+;+
+;+ Trashes:  r_test
+;+ Updates:	r_tstat
+;+
+;+	if (0 EQ (r_tstat & BITn)) {			/* if NOT tuned ... */
+;+
+;+		if (x_offy EQ 0) {					/* if x_offy EQ 0 ... */
+;+
+;+			if ((r_test = x_scly) < 0)		/* r_test = abs(x_scly) */
+;+				r_test = -r_test;
+;+
+;+			if (r_test LE 4) {				/* if abs(x_scly) LE 4 ... */
+;+
+;+				++x_tcnt;					/* increment tuned count */
+;+
+;+				if (x_tcnt EQ 2)			/* if tuned enough ... */
+;+					r_tstat |= BITn;		/* ... indicate tuned */
+;+
+;+			} else {
+;+
+;+				x_tcnt = 0;					/* clear tuned count */
+;+			}
+;+
+;+		} else {
+;+
+;+			x_tcnt = 0;						/* clear tuned count */
+;+		}
+;+	}
+;+ ---------------------------------------------------------------------------
+
+	macro	%check		; <target>, <bit>
+
+	jbs		r_tstat, \1, \0_c_dt			; don't check if already tuned
+
+	add		r_test, 0, \0_offy				; check the offset error
+	jne		\0_c_nt							; not tuned if non-zero
+
+	add		r_test, 0, \0_scly				; check the scale error
+	jge		\0_c_tt							; jump if error is positive
+
+	neg		r_test							; make it positive
+
+\0_c_tt:
+
+	cmp		r_test, #4						; check scale error magnitude
+	jh		\0_c_nt							; not tuned if too large
+
+	ld		r_test, \0_tcnt					; update "tuned" counter
+	inc		r_test
+	st		r_test, \0_tcnt
+
+	cmp		r_test, #2						; see if we've been "tuned" enough
+	jne		\0_c_dt							; jump if not
+
+	orb		r_tstat, #BIT\1					; indicate finally tuned
+	sjmp	\0_c_dt
+
+\0_c_nt:
+
+	st		0, \0_tcnt						; reset the "tuned" counter
+
+\0_c_dt:
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	hsigo() -- start a HSI measurement cycle
+;+;
+;+;	Prototype:
+;+;
+;+;		void hsigo()
+;+;
+;+;	Calls:
+;+;
+;+;		flush_hsi()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	hsigo
+
+hsigo:
+
+	lcall	flush_hsi						; flush the HSI FIFO & disable HSI ints
+
+	clr		hsi0_last						; clear last values seen
+	clr		hsi1_last
+	clr		hsi2_last
+	clr		hsi3_last
+
+	clr		hsi0_val						; clear error values
+	clr		hsi1_val
+	clr		hsi2_val
+	clr		hsi3_val
+
+	clr		hsiflags						; reset hsiflags
+	clr		hsicount						; reset hsicount
+
+	ldb		hsi0_cnt, #HSIDIV				; reset counts to go
+	ldb		hsi1_cnt, #HSIDIV
+	ldb		hsi2_cnt, #HSIDIV
+	ldb		hsi3_cnt, #HSIDIV
+
+	orb		INT_MASK, #BIT2					; set HSI DAV interrupt enable
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	orb		ioc0_img, #01010101B			; enable HSI lines
+	stb		ioc0_img, IOC0
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret
+
+;+ ---------------------------------------------------------------------------
+
+	rseg	acode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	hsi_dav_isr -- hsi data available interrupt service routine
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	hsi_dav_isr				; interrupt hsi_dav_isr()
+
+hsi_dav_isr:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+hsi_ent:
+
+	ldbze	r_stat, <HSI_STATUS				; get hsi status
+	ld		r_time, <HSI_TIME				; get hsi event time
+
+	jbs		hsi_isw, 0, hsi_ckr				; see which measurement to do
+
+	%hsi_rd	0								; check HSI.0 & measure 1 period
+	%hsi_rd	1								; check HSI.1 & measure 1 period
+	%hsi_rd	2								; check HSI.2 & measure 1 period
+	%hsi_rd	3								; check HSI.3 & measure 1 period
+
+	sjmp	hsi_chk
+	
+hsi_ckr:
+
+	%hsi_ck	0								; check HSI.0 & measure 32 periods
+	%hsi_ck	1								; check HSI.1 & measure 32 periods
+	%hsi_ck	2								; check HSI.2 & measure 32 periods
+	%hsi_ck	3								; check HSI.3 & measure 32 periods
+
+hsi_chk:
+
+	if		SNAPIT
+	if		DEBUG_HSI
+	lcall	snap
+	endif	; DEBUG_HSI
+	endif	; SNAPIT
+
+	jbc     IOS1, 7, hsi_eod				; if HSI out of data, we're done
+
+	sjmp	hsi_ent							; otherwise, go get another event
+
+hsi_eod:
+
+	cmpb	hsiflags, #0FFH					; see if we have all readings
+	jne		not_eod							; jump if not
+
+	andb	ioc0_img, #HSI_DSBL				; disable HSI input lines
+	stb		ioc0_img, IOC0
+
+	andb	INT_MASK, #not(BIT2)			; disable HSI interrupts
+
+not_eod:
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret										; return to interrupted code
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	tuner() -- tune the oscillators and filters
+;+;
+;+;	Prototype:
+;+;
+;+;		void tuner()
+;+;
+;+;	Calls:
+;+;
+;+;		flush_hsi()
+;+;		handle_ipc()	or	ipc_wait()		(depends on USEIPC)
+;+;		hsigo()
+;+;		set_adj()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	tuner			; void tuner()
+
+tuner:
+
+; ===========================================================================
+;	I N I T I A L I Z A T I O N
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; preserve registers we use
+; ---------------------------------------------------------------------------
+
+	push	r2								; preserve registers
+	push	r4
+	push	r6
+	push	r8
+	push	r_e2
+	push	r_e6
+
+; ---------------------------------------------------------------------------
+; tell the rest of the world we're tuning and clear r_stat & r_time for debug
+; ---------------------------------------------------------------------------
+
+	if		DISINT
+	andb	INT_MASK1, #not(2)				; disable RI interrupts
+	endif	; DISINT
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	lcall	init_snap						;- initialize the snap buffer
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	clr		snaplog
+	lcall	snap							;- 0x0000: DEBUG_TUN - in tuner() at entry
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	clr		snaplog
+	lcall	snap							;- 0x0000: DEBUG_CVT - in tuner() at start
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	clr		r_stat							; clear hsi_isr registers
+	clr		r_time
+
+	ldbze	intune, #7						; indicate tuning to timer_isr
+
+	ldb		r0, #080H						; indicate tuning to ipc code
+	stb		r0, v+voice_tuning
+	stb		r0, v+voice_tuning+voice_size
+
+	ld		r0, #T_INIT						; setup initial settling time
+	st		r0, w_time
+
+; ---------------------------------------------------------------------------
+; setup HSI hardware for period error measurements
+; ---------------------------------------------------------------------------
+
+	stb		0, HSI_MODE						; setup the HSI line modes
+
+	lcall	flush_hsi						; flush HSI FIFO
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #001H				; enable prescaler (HSO.1 = 0)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+; ---------------------------------------------------------------------------
+; reset the number of tuning attempts, offsets, scale factors and errors
+; based on whether this is initial tuning or a re-tuning attempt.
+; ---------------------------------------------------------------------------
+
+	add		r0, 0, retune					; see if we've been here before
+
+	if		ALWAYS
+	sjmp	need_tuned						; always treat it like power on
+	else	; ALWAYS
+	je		need_tuned						; init offset and scale if not
+	endif	; ALWAYS
+
+; ---------------------------------------------------------------------------
+;	re-tuning only:
+;
+;		tunemax = TUNEMAX/2;
+; ---------------------------------------------------------------------------
+
+	ldbze	r0, #(TUNEMAX/2)				; setup number of times to tune
+	st		r0, tunemax
+
+	sjmp	was_tuned						; skip inits if so
+
+; ---------------------------------------------------------------------------
+;	 initial tuning only:
+;
+;		retune = TRUE;
+;		tunemax = TUNEMAX;
+;
+;		reset offsets and scale factors:
+;
+;			a_v1_off = a_v2_off = a_mm_off = a_ob_off = 0;
+;			b_v1_off = b_v2_off = b_mm_off = b_ob_off = 0;
+; ---------------------------------------------------------------------------
+
+need_tuned:
+
+	ldbze	r0, #1							; setup for subsequent tuning
+	st		r0, retune
+
+	ldbze	r0, #TUNEMAX					; setup number of times to tune
+	st		r0, tunemax
+
+	st		0, a_v1_off						; reset VCO offsets
+	st		0, a_v2_off
+	st		0, b_v1_off
+	st		0, b_v2_off
+
+	st		0, a_mm_off						; reset VCF offsets
+	st		0, a_ob_off
+	st		0, b_mm_off
+	st		0, b_ob_off
+
+	st		0, a_v1_scl						; reset VCO scale factors
+	st		0, a_v2_scl
+	st		0, b_v1_scl
+	st		0, b_v2_scl
+
+	st		0, a_mm_scl						; reset VCF scale factors
+	st		0, a_ob_scl
+	st		0, b_mm_scl
+	st		0, b_ob_scl
+
+; ---------------------------------------------------------------------------
+;	 initial and subsequent tunings:
+;		reset corrections and error values
+;
+;		a_v1_scly, a_v2_scly, a_mm_scly, a_ob_scly = 0;
+;		a_v1_offy, a_v2_offy, a_mm_offy, a_ob_offy = 0;
+;
+;		b_v1_scly, b_v2_scly, b_mm_scly, b_ob_scly = 0;
+;		b_v1_offy, b_v2_offy, b_mm_offy, b_ob_offy = 0;
+;
+;		a_v1_e2, a_v2_e2, a_mm_e2, a_ob_e2 = 0;
+;		b_v1_e2, b_v2_e2, b_mm_e2, b_ob_e2 = 0;
+;
+;		a_v1_e6, a_v2_e6, a_mm_e6, a_ob_e6 = 0;
+;		b_v1_e6, b_v2_e6, b_mm_e6, b_ob_e6 = 0;
+; ---------------------------------------------------------------------------
+
+was_tuned:
+
+	st		0, a_v1_offy					; reset A VCO corrections
+	st		0, a_v1_scly
+	st		0, a_v2_offy
+	st		0, a_v2_scly
+
+	st		0, a_mm_offy					; reset A VCF corrections
+	st		0, a_mm_scly
+	st		0, a_ob_offy
+	st		0, a_ob_scly
+
+	st		0, b_v1_offy					; reset B VCO corrections
+	st		0, b_v1_scly
+	st		0, b_v2_offy
+	st		0, b_v2_scly
+
+	st		0, b_mm_offy					; reset B VCF corrections
+	st		0, b_mm_scly
+	st		0, b_ob_offy
+	st		0, b_ob_scly
+
+	st		0, a_v1_e2						; reset VCO E2 error values
+	st		0, a_v2_e2
+	st		0, b_v1_e2
+	st		0, b_v2_e2
+
+	st		0, a_v1_e6						; reset VCO E6 error values
+	st		0, a_v2_e6
+	st		0, b_v1_e6
+	st		0, b_v2_e6
+
+	st		0, a_mm_e2						; reset VCF E2 error values
+	st		0, a_ob_e2
+	st		0, b_mm_e2
+	st		0, b_ob_e2
+
+	st		0, a_mm_e6						; reset VCF E6 error values
+	st		0, a_ob_e6
+	st		0, b_mm_e6
+	st		0, b_ob_e6
+
+; ---------------------------------------------------------------------------
+; reset number of tuning attempts and "tuned" counters:
+;
+;	tunetry = 0;
+;
+;	a_v1_tcnt = a_v2_tcnt = a_mm_tcnt = a_ob_tcnt = 0;
+;	b_v1_tcnt = b_v2_tcnt = b_mm_tcnt = b_ob_tcnt = 0;
+; ---------------------------------------------------------------------------
+
+	clr		tunetry							; reset number of tuning attempts
+
+	st		0, a_v1_tcnt					; clear VOICE A "tuned" counters
+	st		0, a_v2_tcnt
+	st		0, a_mm_tcnt
+	st		0, a_ob_tcnt
+
+	st		0, b_v1_tcnt					; clear VOICE B "tuned" counters
+	st		0, b_v2_tcnt
+	st		0, b_mm_tcnt
+	st		0, b_ob_tcnt
+
+; ---------------------------------------------------------------------------
+; preserve the control voltages from cvtable[] in cvsave[]
+; ---------------------------------------------------------------------------
+
+	ld		r_srcw, #cvtable				; save cvtable[]
+	ld		r_dstw, #cvsave
+	ldbze	r_wcnt, #64
+	bmov	r_ptrs, r_wcnt
+
+; ---------------------------------------------------------------------------
+; set the VCO waveshapes to pulse and un-sync them:
+;
+;	VACTL = 0x66
+;	VBCTL = 0x66
+; ---------------------------------------------------------------------------
+
+	ldb		r0, #066H						; setup voice A osc controls
+	stb		r0, VACTL
+
+	ldb		r0, #066H						; setup voice B osc controls
+	stb		r0, VBCTL
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #1
+	lcall	snap							;- 0x0001: DEBUG_CVT - in tuner() after setup
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ===========================================================================
+;	M A I N   T U N I N G   L O O P
+;
+; This begins a tuning pass, counted by tunetry.
+; We execute this loop until we are tuned, or run out of tries.
+; ===========================================================================
+
+try_tuning:
+
+	inc		tunetry							; count this try
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #1
+	lcall	snap							;- 0x0001: DEBUG_TUN - in tuner() at try_tuning
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ===========================================================================
+;	V C O   T U N I N G   P H A S E
+;
+; Set VCO frequencies to LOW and HIGH values and measure the errors there.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; prepare CVs for VCO measurements:
+;
+;	MM_IN1		 60
+;	MM_IN2		  0
+;	MM_NOISE	  0
+;
+;	OB_IN1		  0
+;	OB_IN2		100
+;	OB_NOISE	  0
+;
+;	MM_RESON	  0
+;	OB_RESON	  0
+;
+;	VCO1_FM		  0
+;	VCO2_FM		  0
+;
+;	VCO1_PW		 50
+;	VCO2_PW		 50
+;
+;	MM_FREQ		0x0CFF
+;	OB_FREQ		0x0CFF
+; ---------------------------------------------------------------------------
+
+	clr		r0								; things that need to be 0
+
+	st		r0, cvtable+A_MM_IN2
+	st		r0, cvtable+A_OB_IN1
+	st		r0, cvtable+B_MM_IN2
+	st		r0, cvtable+B_OB_IN1
+
+	st		r0, cvtable+A_MM_NOISE
+	st		r0, cvtable+A_VCO1_FM
+	st		r0, cvtable+A_VCO2_FM
+	st		r0, cvtable+A_OB_NOISE
+
+	st		r0, cvtable+B_MM_NOISE
+	st		r0, cvtable+B_VCO1_FM
+	st		r0, cvtable+B_VCO2_FM
+	st		r0, cvtable+B_OB_NOISE
+
+	ld		r0, #07FFH						; things that need to be 50
+
+	st		r0, cvtable+A_VCO1_PW
+	st		r0, cvtable+B_VCO1_PW
+	st		r0, cvtable+A_VCO2_PW
+	st		r0, cvtable+B_VCO2_PW
+
+	ld		r0, #0999H						; things that need to be 60
+
+	st		r0, cvtable+A_MM_IN1
+	st		r0, cvtable+B_MM_IN1
+
+	ld		r0, #0FFFH						; things that need to be 100
+
+	st		r0, cvtable+A_OB_IN2
+	st		r0, cvtable+B_OB_IN2
+
+	ld		r0, #0							; adjusted filter resonances
+
+	st		r0, cvtable+A_OB_RESON
+	st		r0, cvtable+B_OB_RESON
+	st		r0, cvtable+A_MM_RESON
+	st		r0, cvtable+B_MM_RESON
+
+	ld		r0, #0CFFH						; adjust filter frequencies
+ 
+	st		r0, cvtable+A_MM_FREQ
+	st		r0, cvtable+A_OB_FREQ
+	st		r0, cvtable+B_MM_FREQ
+	st		r0, cvtable+B_OB_FREQ
+
+; ---------------------------------------------------------------------------
+; set VCO pitches to LOW  (F2+82 cents: 750KHz / 8192 = 91.55 Hz, 10.923 ms)
+; ---------------------------------------------------------------------------
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #003H				; prescale by 1 (HSO.3 = 0)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_HSI
+	ld		snaplog, #0000H					;- 0x0000: DEBUG_HSI - VCO LO
+	endif	; DEBUG_HSI
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	%setvco	#0053AH							; setup the LOW tuning pitch
+	%mswait	w_time							; wait for VCOs to stabilize
+
+	ld		r0, #T_STABLE					; reset for subsequent passes
+	st		r0, w_time
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #2
+	lcall	snap							;- 0x0002: DEBUG_CVT - in tuner() after set VCO LO
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; start the VCO LO HSI measurement cycle
+; ---------------------------------------------------------------------------
+
+	clr		hsi_isw							; set to count 1 period
+
+	lcall	hsigo							; start the HSI cycle
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #2
+	lcall	snap							;- 0x0002: DEBUG_TUN - VCO LO start 
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; WAIT for the VCO LO measurements to be made or a timeout to occur
+; ---------------------------------------------------------------------------
+
+ti_wait1:
+
+	cmpb	hsiflags, #0FFH					; see if we've got readings yet
+	je		ti_meas1						; jump if so
+
+	cmp		hsicount, #100					; see if we've waited long enough
+	jnh		ti_wait1						; loop if not
+
+; ---------------------------------------------------------------------------
+; take the VCO LO readings and store them for the calculation phase
+; ---------------------------------------------------------------------------
+
+ti_meas1:
+
+	andb	INT_MASK, #not(BIT2)			; clear HSI DAV interrupt enable
+
+	st		hsi0_val, a_v1_e2				; a_v1_e2 = hsi0_val
+	st		hsi1_val, a_v2_e2				; a_v2_e2 = hsi1_val
+	st		hsi2_val, b_v1_e2				; b_v1_e2 = hsi2_val
+	st		hsi3_val, b_v2_e2				; b_v2_e2 = hsi3_val
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #3
+	lcall	snap							;- 0x0003: DEBUG_TUN - VCO LO end
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; set VCO pitches to HIGH  (F6+82 cents: 750KHz / 512 = 1465 Hz, 0.6825 ms)
+; ---------------------------------------------------------------------------
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #023H				; prescale by 16 (HSO.3 = 1)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_HSI
+	ld		snaplog, #0001H					;- 0x0001: DEBUG_HSI - VCO HI
+	endif	; DEBUG_HSI
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	%setvco	#00B3AH							; setup the HIGH tuning pitch
+	%mswait	#T_STABLE						; WAIT for VCOs to stabilize
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #3
+	lcall	snap							;- 0x0003: DEBUG_CVT - in tuner() after set VCO HI
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; start the VCO HI HSI measurement cycle
+; ---------------------------------------------------------------------------
+
+	clr		hsi_isw							; set to count 1 period
+
+	lcall	hsigo							; start the HSI cycle
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #4
+	lcall	snap							;- 0x0004: DEBUG_TUN - VCO HI start
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; WAIT for the VCO HI measurements to be made or a timeout to occur
+; ---------------------------------------------------------------------------
+
+ti_wait2:
+
+	cmpb	hsiflags, #0FFH					; see if we've got readings yet
+	je		ti_meas2						; jump if so
+
+	cmp		hsicount, #100					; see if we've waited long enough
+	jnh		ti_wait2						; loop if not
+
+; ---------------------------------------------------------------------------
+; take the VCO HI readings and store them for the calculation phase
+; ---------------------------------------------------------------------------
+
+ti_meas2:
+
+	andb	INT_MASK, #not(BIT2)			; clear HSI DAV interrupt enable
+
+	st		hsi0_val, a_v1_e6				; a_v1_e6 = hsi0_val
+	st		hsi1_val, a_v2_e6				; a_v2_e6 = hsi1_val
+	st		hsi2_val, b_v1_e6				; b_v1_e6 = hsi2_val
+	st		hsi3_val, b_v2_e6				; b_v2_e6 = hsi3_val
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #5
+	lcall	snap							;- 0x0005: DEBUG_TUN - VCO HI end
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ===========================================================================
+;	V C F   T U N I N G   P H A S E
+;
+; Set VCF frequencies to LOW and HIGH values and measure the errors there.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; prepare CVs for VCF measurements:
+;
+;	MM_IN1		  0
+;	MM_IN2		  0
+;	MM_NOISE	  0
+;	MM_RESON	 100
+;
+;	OB_IN1		  0
+;	OB_IN2		  0
+;	OB_NOISE	  0
+;	OB_RESON	100
+;
+; ---------------------------------------------------------------------------
+
+	clr		r0								; things that need to be 0
+
+	st		r0, cvtable+A_MM_IN1
+	st		r0, cvtable+A_MM_IN2
+	st		r0, cvtable+A_MM_NOISE
+	st		r0, cvtable+A_OB_IN1
+	st		r0, cvtable+A_OB_IN2
+	st		r0, cvtable+A_OB_NOISE
+
+	st		r0, cvtable+B_MM_IN1
+	st		r0, cvtable+B_MM_IN2
+	st		r0, cvtable+B_MM_NOISE
+	st		r0, cvtable+B_OB_IN1
+	st		r0, cvtable+B_OB_IN2
+	st		r0, cvtable+B_OB_NOISE
+
+	ld		r0, #0FFFH						; things that need to be 100
+
+	st		r0, cvtable+A_MM_RESON
+	st		r0, cvtable+A_OB_RESON
+	st		r0, cvtable+B_MM_RESON
+	st		r0, cvtable+B_OB_RESON
+
+; ---------------------------------------------------------------------------
+; set VCF pitches to LOW  (F2+82 cents: 750KHz / 8192 = 91.55 Hz, 10.923 ms)
+; ---------------------------------------------------------------------------
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #003H				; prescale by 1 (HSO.3 = 0)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_HSI
+	ld		snaplog, #0100H					;- 0x0100: DEBUG_HSI - VCF LO
+	endif	; DEBUG_HSI
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	%setvcf	#0053AH							; setup the LOW tuning frequency
+	%mswait	#T_STABLE						; WAIT for VCFs to stabilize
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #4
+	lcall	snap							;- 0x0004: DEBUG_CVT - in tuner() after set VCF LO
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; start the VCF LO HSI measurement cycle
+; ---------------------------------------------------------------------------
+
+	clr		hsi_isw							; set to count 1 period
+
+	lcall	hsigo							; start the HSI cycle
+
+; ---------------------------------------------------------------------------
+; WAIT for the VCF LO measurements to be made or a timeout to occur
+; ---------------------------------------------------------------------------
+
+ti_wait3:
+
+	cmpb	hsiflags, #0FFH					; see if we've got readings yet
+	je		ti_meas3						; jump if so
+
+	cmp		hsicount, #100					; see if we've waited long enough
+	jnh		ti_wait3						; loop if not
+
+; ---------------------------------------------------------------------------
+; take the VCF LO readings and store them for the calculation phase
+; ---------------------------------------------------------------------------
+
+ti_meas3:
+
+	andb	INT_MASK, #not(BIT2)			; clear HSI DAV interrupt enable
+
+	st		hsi0_val, a_mm_e2				; a_mm_e2 = hsi0_val
+	st		hsi1_val, a_ob_e2				; a_ob_e2 = hsi1_val
+	st		hsi2_val, b_mm_e2				; b_mm_e2 = hsi2_val
+	st		hsi3_val, b_ob_e2				; b_ob_e2 = hsi3_val
+
+; ---------------------------------------------------------------------------
+; set VCF pitches to HIGH  (F6+82 cents: 750KHz / 512 = 1465 Hz, 0.6825 ms)
+; ---------------------------------------------------------------------------
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #023H				; prescale by 16 (HSO.3 = 1)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_HSI
+	ld		snaplog, #0101H					;- 0x0101: DEBUG_HSI - VCF HI
+	endif	; DEBUG_HSI
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	%setvcf	#00B3AH							; setup the HIGH tuning frequency
+	%mswait	#T_STABLE						; WAIT for VCFs to stabilize
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #5
+	lcall	snap							;- 0x0005: DEBUG_CVT - in tuner() after set VCF HI
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; start the VCF HSI measurement cycle
+; ---------------------------------------------------------------------------
+
+	clr		hsi_isw							; set to count 1 period
+
+	lcall	hsigo							; start the HSI cycle
+
+; ---------------------------------------------------------------------------
+; WAIT for the VCF measurements to be made or a timeout to occur
+; ---------------------------------------------------------------------------
+
+ti_wait4:
+
+	cmpb	hsiflags, #0FFH					; see if we've got readings yet
+	je		ti_meas4						; jump if so
+
+	cmp		hsicount, #100					; see if we've waited long enough
+	jnh		ti_wait4						; loop if not
+
+; ---------------------------------------------------------------------------
+; take the VCF HI readings and store them for the calculation phase
+; ---------------------------------------------------------------------------
+
+ti_meas4:
+
+	andb	INT_MASK, #not(BIT2)			; clear HSI DAV interrupt enable
+
+	st		hsi0_val, a_mm_e6				; a_mm_e6 = hsi0_val
+	st		hsi1_val, a_ob_e6				; a_ob_e6 = hsi1_val
+	st		hsi2_val, b_mm_e6				; b_mm_e6 = hsi2_val
+	st		hsi3_val, b_ob_e6				; b_ob_e6 = hsi3_val
+
+; ===========================================================================
+;	C A L C U L A T I O N   P H A S E
+; ===========================================================================
+
+	public	tunecalc
+
+tunecalc:
+
+	nop
+	nop
+
+; ---------------------------------------------------------------------------
+; calculate offset corrections (offy) and scale factor corrections (scly)
+; ---------------------------------------------------------------------------
+
+; ---------------------------------------------------------------------------
+;	%calc	a_v1							; VCOs
+; ---------------------------------------------------------------------------
+
+	ld		r_e2, a_v1_e2			; get E2
+	ld		r_e6, a_v1_e6			; get E6
+
+	mul		r_mul, r_e2, cfoff		; calculate E2 * CFOFF
+
+	st		r_mul, prod1			; store LO WORD of product
+	st		r_res, prod2			; store HI WORD of product
+
+	mul		r_mul, r_e6, cfoff		; calculate E6 * CFOFF
+
+	add		r_mul, prod1			; (E2 * cfoff) + (E6 * cfoff)
+	addc	r_res, prod2
+
+	neg		r_res					; negate high word of result
+
+	st		r_res, a_v1_offy		; store offset adjustment
+
+	mul		r_mul, r_e6, cfscl		; calculate E6 * CFSCL
+
+	st		r_mul, prod1			; store LO WORD of product
+	st		r_res, prod2			; store HI WORD of product
+
+	mul		r_mul, r_e2, cfscl		; calculate E2 * CFSCL
+
+	sub		r_mul, prod1			; (E2 * cfscl) - (E6 * cfscl)
+	subc	r_res, prod2
+
+	st		r_res, a_v1_scly		; store scale factor adjustment
+
+	%calc	a_v2
+	%calc	b_v1
+	%calc	b_v2
+
+	%calc	a_mm					; VCFs
+	%calc	a_ob
+	%calc	b_mm
+	%calc	b_ob
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #6
+	lcall	snap							;- 0x0006: DEBUG_TUN - after calculations
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #6
+	lcall	snap							;- 0x0006: DEBUG_CVT - in tuner() after calculations
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	public	calcdone
+
+calcdone:
+
+; ===========================================================================
+;	T U N I N G   C H E C K   P H A S E
+;
+; See if we're tuned, and try again until we are, or we're tired of trying.
+; ===========================================================================
+
+; ---------------------------------------------------------------------------
+; update voice A composite tuning status
+; ---------------------------------------------------------------------------
+
+	ldb		r_tstat, v+voice_tuning			; get status so far
+
+	%check	a_v1, 0							; check voice A VCO1
+	%check	a_v2, 1							; check voice A VCO2
+	%check	a_mm, 2							; check voice A MM VCF
+	%check	a_ob, 3							; check voice A OB VCF
+
+	stb		r_tstat, v+voice_tuning			; update status so far
+
+; ---------------------------------------------------------------------------
+; update voice B composite tuning status
+; ---------------------------------------------------------------------------
+
+	ldb		r_tstat, v+voice_tuning+voice_size	; get status so far
+
+	%check	b_v1, 0							; check voice B VCO1
+	%check	b_v2, 1							; check voice B VCO2
+	%check	b_mm, 2							; check voice B MM VCF
+	%check	b_ob, 3							; check voice B OB VCF
+
+	stb		r_tstat, v+voice_tuning+voice_size	; update status so far
+
+; ---------------------------------------------------------------------------
+; check composite tuning status for both voices and decide whether to retune
+;
+;	if ((v[VA].tuning EQ 0x8F) AND (v[VB].tuning EQ 0x8F))
+;		goto tuning_done;
+;	else
+;		goto not_tuned;
+; ---------------------------------------------------------------------------
+
+	ldb		r_tstat, v+voice_tuning			; check voice A
+	cmpb	r_tstat, #08FH
+	jne		not_tuned						; jump if not all tuned
+
+	ldb		r_tstat, v+voice_tuning+voice_size	; check voice B
+	cmpb	r_tstat, #08FH
+	jne		not_tuned						; jump if not all tuned
+
+	sjmp	tuning_done						; jump if all tuned
+
+; ===========================================================================
+;	A D J U S T M E N T   P H A S E
+; Adjust offsets (_off) and scale factors (_scl) for things not yet tuned.
+; ===========================================================================
+
+not_tuned:
+
+; ---------------------------------------------------------------------------
+; see if we re-tune or quit tuning
+; ---------------------------------------------------------------------------
+
+	cmp		tunetry, tunemax				; see if we're tired of trying
+	jnh		adjust_em						; go adjust if not
+
+	sjmp	tuning_done						; done if so
+
+; ---------------------------------------------------------------------------
+; Adjust offsets (_off) and scale factors (_scl)
+; ---------------------------------------------------------------------------
+
+adjust_em:
+
+	ldb		r_tstat, v+voice_tuning			; get VOICE A tuning flags
+
+	%adj_o	a_v1, 0							; adjust VCO offsets
+	%adj_o	a_v2, 1
+	%adj_o	a_mm, 2							; adjust VCF offsets
+	%adj_o	a_ob, 3
+
+	%adj_s	a_v1, 0							; adjust VCO scale factors
+	%adj_s	a_v2, 1
+	%adj_s	a_mm, 2							; adjust VCF scale factors
+	%adj_s	a_ob, 3
+
+	ldb		r_tstat, v+voice_tuning+voice_size	; get VOICE B tuning flags
+
+	%adj_o	b_v1, 0							; adjust VCO offsets
+	%adj_o	b_v2, 1
+	%adj_o	b_mm, 2							; adjust VCF offsets
+	%adj_o	b_ob, 3
+
+	%adj_s	b_v1, 0							; adjust VCO scale factors
+	%adj_s	b_v2, 1
+	%adj_s	b_mm, 2							; adjust VCF scale factors
+	%adj_s	b_ob, 3
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #7
+	lcall	snap							;- 0x0007: DEBUG_TUN - after adjustments
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #7
+	lcall	snap							;- 0x0007: DEBUG_CVT - in tuner() after adjustments
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	ljmp	try_tuning						; try it again
+
+; ---------------------------------------------------------------------------
+; touchup tuning and update final tuning status for both voices
+;
+;	v[VA].tuning &= 0x7F
+;	v[VB].tuning &= 0x7F
+; ---------------------------------------------------------------------------
+
+	public	tuning_done
+
+tuning_done:
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #8
+	lcall	snap							;- 0x0008: DEBUG_CVT - in tuner() before touchup()
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	lcall	touchup							; touch up the final tuning
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #9
+	lcall	snap							;- 0x0009: DEBUG_CVT - in tuner() after toucup()
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+	ldb		r_tstat, v+voice_tuning			; update voice A tuning status
+	andb	r_tstat, #07FH
+	stb		r_tstat, v+voice_tuning
+
+	ldb		r_tstat, v+voice_tuning+voice_size	; update voice B tuning status
+	andb	r_tstat, #07FH
+	stb		r_tstat, v+voice_tuning+voice_size
+
+; ===========================================================================
+;	T E R M I N A T I O N
+;
+; Output final scalings and restore the machine state.
+; ===========================================================================
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #8
+	lcall	snap							;- 0x0008: DEBUG_TUN - at termination
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	andb	ioc0_img, #10101010B			; disable HSI.0 .. HSI.3
+	stb		ioc0_img, IOC0
+
+	ldb		HSO_COMMAND, #021H				; disable prescaler (HSO.1 = 1)
+	add		HSO_TIME, TIMER1, #2
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+; ---------------------------------------------------------------------------
+; setup tune_save[] from tune_vars[]
+; ---------------------------------------------------------------------------
+
+	ld		r_srcw, #tune_vars				; setup tune_save[]
+	ld		r_dstw, #tune_save
+	ldbze	r_wcnt, #16
+	bmov	r_ptrs, r_wcnt
+
+; ---------------------------------------------------------------------------
+
+	if		DISINT
+	orb		INT_MASK1, #2					; re-enable RI interrupts
+	ld		intune, #3						; allow SIO back in
+	endif	; DISINT
+
+; ---------------------------------------------------------------------------
+
+	if		WAIT_IPC
+	lcall	ipc_wait						; hang out until IPC is active
+	endif	; WAIT_IPC
+
+; ---------------------------------------------------------------------------
+; restore oscillator controls
+; ---------------------------------------------------------------------------
+
+	orb		ioc1_img, #BIT6					; IOC1.6 = 1 -- enable SDA output
+	ldb		IOC1, <ioc1_img					; ... on HSO.5
+
+	ldb		r0, ctltable+8					; restore voice A osc controls
+	andb	r0, #00FH						; r0 = ctltable[8] & 0x0F
+	ldb		r1, ctltable+9
+	shlb	r1, #4
+	andb	r1, #0F0H						; r1 = ((ctltable[9] & 0x0F) << 4)
+	orb		r0, r1							; r0 |= r1
+	andb	r1, r0, #080H					; r1 = (r0 & 0x80) >> 4
+	shrb	r1, #4
+	andb	r2, r0, #008H					; r2 = (r0 & 0x08) << 4
+	shlb	r2, #4
+	orb		r1, r2							; r1 |= r2
+	andb	r0, #077H						; r0 &= 0x77
+	orb		r0, r1							; r0 |= r1
+	xorb	r0, #077H
+	stb		r0, VACTL						; VACTL = r0 ^ 0x77
+
+	ldb		r0, ctltable+10					; restore voice B osc controls
+	andb	r0, #00FH						; r0 = ctltable[10] & 0x0F
+	ldb		r1, ctltable+11
+	shlb	r1, #4
+	andb	r1, #0F0H						; r1 = ((ctltable[11] & 0x0F) << 4)
+	orb		r0, r1							; r0 |= r1
+	andb	r1, r0, #080H					; r1 = (r0 & 0x80) >> 4
+	shrb	r1, #4
+	andb	r2, r0, #008H					; r2 = (r0 & 0x08) << 4
+	shlb	r2, #4
+	orb		r1, r2							; r1 |= r2
+	andb	r0, #077H						; r0 &= 0x77
+	orb		r0, r1							; r0 |= r1
+	xorb	r0, #077H
+	stb		r0, VBCTL						; VBCTL = r0 ^ 0x77
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #0AH
+	lcall	snap							;- 0x000A: DEBUG_CVT - in tuner() after osc ctls
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; restore cvtable[] from cvsave[]
+; ---------------------------------------------------------------------------
+
+	ld		r_srcw, #cvsave					; restore cvtable[]
+	ld		r_dstw, #cvtable
+	ldbze	r_wcnt, #64
+	bmov	r_ptrs, r_wcnt
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #0BH
+	lcall	snap							;- 0x000B: DEBUG_CVT - in tuner() after cvtable restore
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; fixup cvtable[] entries for scale factors:
+;
+;	cvtabl[A_VCO1_SCALE]	= 0x0800 + a_v1_scl;
+;	cvtabl[A_VCO2_SCALE]	= 0x0800 + a_v2_scl;
+;	cvtabl[A_MM_SCALE]		= 0x0800 + a_mm_scl;
+;	cvtabl[A_OB_SCALE]		= 0x0800 + a_ob_scl;
+;
+;	cvtabl[B_VCO1_SCALE]	= 0x0800 + b_v1_scl;
+;	cvtabl[B_VCO2_SCALE]	= 0x0800 + b_v2_scl;
+;	cvtabl[B_MM_SCALE]		= 0x0800 + b_mm_scl;
+;	cvtabl[B_OB_SCALE]		= 0x0800 + b_ob_scl;
+; ---------------------------------------------------------------------------
+
+	ld		r0, #0800H
+
+	add		r2, r0, a_v1_scl				; output a_v1_scl to DAC
+	lcall	limit
+	st		r2, cvtable+A_VCO1_SCALE
+
+	add		r2, r0, a_v2_scl				; output a_v2_scl to DAC
+	lcall	limit
+	st		r2, cvtable+A_VCO2_SCALE
+
+	add		r2, r0, a_mm_scl				; output a_mm_scl to DAC
+	lcall	limit
+	st		r2, cvtable+A_MM_SCALE
+
+	add		r2, r0, a_ob_scl				; output a_ob_scl to DAC
+	lcall	limit
+	st		r2, cvtable+A_OB_SCALE
+
+	add		r2, r0, b_v1_scl				; output b_v1_scl to DAC
+	lcall	limit
+	st		r2, cvtable+B_VCO1_SCALE
+
+	add		r2, r0, b_v2_scl				; output b_v2_scl to DAC
+	lcall	limit
+	st		r2, cvtable+B_VCO2_SCALE
+
+	add		r2, r0, b_mm_scl				; output b_mm_scl to DAC
+	lcall	limit
+	st		r2, cvtable+B_MM_SCALE
+
+	add		r2, r0, b_ob_scl				; output b_ob_scl to DAC
+	lcall	limit
+	st		r2, cvtable+B_OB_SCALE
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #0CH
+	lcall	snap							;- 0x000C: DEBUG_CVT - after cvtable[] fixup
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; reset VCO ADJUST values via set_adj()
+; ---------------------------------------------------------------------------
+
+	lcall	set_adj							; reset VCO ADJUST values
+
+	clr		intune							; indicate done tuning to timer_isr
+
+	%mswait	#3								; wait for things to start up
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_CVT
+	ldbze	snaplog, #0DH
+	lcall	snap							;- 0x000D: DEBUG_CVT - at exit
+	endif	; DEBUG_CVT
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+
+	if		SNAPIT
+	if		DEBUG_TUN
+	ldbze	snaplog, #9
+	lcall	snap							;- 0x0009: DEBUG_TUN - at exit
+	endif	; DEBUG_TUN
+	endif	; SNAPIT
+
+; ---------------------------------------------------------------------------
+; restore registers and return
+; ---------------------------------------------------------------------------
+
+	st		0, <stwat_flag					; reset tuning flag
+
+	pop		r_e6							; restore registers
+	pop		r_e2
+	pop		r8
+	pop		r6
+	pop		r4
+	pop		r2
+
+	ret										; return to caller
+
+; ---------------------------------------------------------------------------
+
+cfoff:	dcw		275							; scaling constant for offset
+cfscl:	dcw		2752						; scaling constant for scale
+
+; The End --------------------------------------------------------------------
+
+	end

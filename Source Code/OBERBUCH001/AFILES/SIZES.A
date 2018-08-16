@@ -1,0 +1,22 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		SIZES.A
+;+;	Purpose:	OB-MX include file assembly for documentation
+;+;	Original:		1993-05-26	D.N. Lynx Crowe
+;+;	Revision:	6	1993-12-06	D.N. Lynx Crowe
+;+;
+;+;	This module is only used to obtain values for the sizes and offsets
+;+;	of data structures.  These get used in the documentation and in the
+;+;	debug.prc file for the ICE-196 in-circuit emulator.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	sizes
+
+	rseg	acode		; nothing here
+
+$VOICE.INC
+
+	public	sizes		; just a convenient label
+
+sizes:
+
+	end

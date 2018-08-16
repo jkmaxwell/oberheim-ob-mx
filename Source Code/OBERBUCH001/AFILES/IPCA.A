@@ -1,0 +1,489 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		IPCA.A
+;+;	Purpose:	OB-MX IPC parser state machine functions
+;+;	Original:		1993-12-08	D.N. Lynx Crowe
+;+;	Revision:	6	1993-12-15	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		id_req_state()		ID request parser state
+;+;		ipc_state_0()		parser state 0
+;+;		ipc1_state_1()		voice A parser state 1
+;+;		ipc1_state_2()		voice A parser state 2
+;+;		ipc2_state_1()		voice B parser state 1
+;+;		ipc2_state_2()		voice B parser state 2
+;+;		ipcb_state_1()		both voices parser state 1
+;+;		ipcb_state_2()		both voices parser state 2
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	ipca
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	ipc_addr
+	extern	ipc_byte1
+	extern	ipc_byte2
+	extern	ipc_stat
+	extern	ipc_state
+	extern	red1_tbl
+	extern	red2_tbl
+	extern	redb_tbl
+	extern	stch_tbl
+	extern	stpt_tbl
+	extern	stvc_tbl
+	extern	vid1
+	extern	vid2
+
+	extern	write_ipc
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc_state_0() -- parser state 0
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc_state_0(stat)
+;+;		BYTE stat;		input byte  (should be a command byte...)
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipc_state_0
+
+ipc_state_0:
+
+	ldbze	r0, 2[sp]				; check for a command byte
+	jbs		r0, 7, is0b				; go process command byte if present
+
+	sjmp	is0n					; if it was a data byte, ignore it
+
+is0b:
+
+	and		r0, #000FH				; extract ipc_addr
+	st		r0, ipc_addr			; ...
+
+	ldbze	r0, 2[sp]				; extract ipc_stat
+	shr		r0, #4					; ...
+	and		r0, #0007H				; ...
+	st		r0, ipc_stat			; ...
+
+	add		r0, r0					; switch (ipc_stat)
+	ld		r0, is0jt[r0]			; ...
+	br		[r0]					; ...
+
+; ----------------------------------------------------------------------------
+; VOICE specific messages
+; ----------------------------------------------------------------------------
+;
+;	case 0:		set voice part or channel
+;	case 2:		gate/ungate note
+;	case 6:		voice specific function request
+; ----------------------------------------------------------------------------
+
+is0d:
+
+	ld		r0, ipc_addr			; check that ipc_addr = 0..11
+	cmp		r0, #11					; ...
+	jnh		is0f					; go process message if address valid
+
+	sjmp	is0n					; invalid input, ignore it
+
+is0f:
+
+	add		r0, r0					; setup to get stvc_tbl[ipc_addr]
+	add		r0, #stvc_tbl			; ...
+	sjmp	is0j					; go get table entry
+
+; ----------------------------------------------------------------------------
+; CHANNEL specific message
+; ----------------------------------------------------------------------------
+;
+;	case 5:		performance parameter
+; ----------------------------------------------------------------------------
+
+is0g:
+
+	ld		r0, ipc_addr			; setup to get stch_tbl[ipc_addr]
+	add		r0, r0					; ...
+	add		r0, #stch_tbl			; ...
+	sjmp	is0j					; go get table entry
+
+; ----------------------------------------------------------------------------
+; PART specific messages
+; ----------------------------------------------------------------------------
+;
+;	case 1:		part specific function request
+;	case 3:		preset parameter
+;	case 4:		user modulation
+; ----------------------------------------------------------------------------
+
+is0h:
+
+	ld		r0, ipc_addr			; check that ipc_addr = 0..5
+	cmp		r0, #5					; ...
+	jnh		is0k					; go process message if address valid
+
+	sjmp	is0n					; invalid input, ignore it
+
+is0k:
+
+	add		r0, r0					; setup to get stpt_tbl[ipc_addr]
+	add		r0, #stpt_tbl			; ...
+
+is0j:
+
+	ld		r0, [r0]				; get table entry
+	sjmp	is0c					; go update ipc_state
+
+; ----------------------------------------------------------------------------
+; message for ALL VOICES
+; ----------------------------------------------------------------------------
+;
+;	case 7:		id request
+; ----------------------------------------------------------------------------
+
+is0m:
+
+	ld		r0, #id_req_state		; setup for id_req_state
+	sjmp	is0c					; go update ipc_state
+
+; ----------------------------------------------------------------------------
+
+is0n:
+
+	ld		r0, #ipc_state_0		; invalid input, set ipc_state = ipc_state_0
+
+is0c:
+
+	st		r0, ipc_state			; update ipc_state
+
+	ret								; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc1_state_1() -- voice A parser state 1
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc1_state_1(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_state_0()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipc1_state_1
+
+ipc1_state_1:
+
+	ldbze	r0, 2[sp]				; get the input byte
+	jbc		r0, 7, i1s1a			; check for a command byte
+
+	ljmp	ipc_state_0				; go process command byte if present
+
+i1s1a:
+
+	st		r0, ipc_byte1			; stash the input byte
+	ld		r0, #ipc1_state_2		; ipc_state = ipc1_state_2
+	st		r0, ipc_state			; ...
+
+	ret								; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc2_state_1() -- voice B parser state 1
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc2_state_1(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_state_0()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipc2_state_1
+
+ipc2_state_1:
+
+	ldbze	r0, 2[sp]				; get the input byte
+	jbc		r0, 7, i2s1a			; check for a command byte
+
+	ljmp	ipc_state_0				; go process command byte if present
+
+i2s1a:
+
+	st		r0, ipc_byte1			; stash the input byte
+	ld		r0, #ipc2_state_2		; ipc_state = ipc2_state_2
+	st		r0, ipc_state			; ...
+
+	ret								; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipcb_state_1() -- both voices parser state 1
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipcb_state_1(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_state_0()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipcb_state_1
+
+ipcb_state_1:
+
+	ldbze	r0, 2[sp]				; get the input byte
+	jbc		r0, 7, ibs1a			; check for a command byte
+
+	ljmp	ipc_state_0				; go process command byte if present
+
+ibs1a:
+
+	st		r0, ipc_byte1			; stash the input byte
+	ld		r0, #ipcb_state_2		; ipc_state = ipcb_state_2
+	st		r0, ipc_state			; ...
+
+	ret								; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc1_state_2() -- voice A parser state 2
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc1_state_2(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_state_0()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipc1_state_2
+
+ipc1_state_2:
+
+	ldbze	r0, 2[sp]			; get the input byte
+	jbc		r0, 7, i1s2a		; check for a command
+
+	ljmp	ipc_state_0			; go process command byte if present
+
+i1s2a:
+
+	st		r0, ipc_byte2		; stash input byte in ipc_byte2
+	ld		r0, #ipc1_state_1	; ipc_state = ipc1_state_1
+	st		r0, ipc_state		; ...
+	ld		r0, ipc_stat		; get command type
+	add		r0, r0				; make it a WORD index
+	add		r0, #red1_tbl		; add the table offset
+	ld		r0, [r0]			; get the reduction routine address
+	br		[r0]				; dispatch to the reduction routine  (it returns)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc2_state_2() -- voice B parser state 2
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc2_state_2(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_state_0()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipc2_state_2
+
+ipc2_state_2:
+
+	ldbze	r0, 2[sp]			; get the input byte
+	jbc		r0, 7, i2s2a		; check for a command
+
+	ljmp	ipc_state_0			; go process command byte if present
+
+i2s2a:
+
+	st		r0, ipc_byte2		; stash input byte in ipc_byte2
+	ld		r0, #ipc2_state_1	; ipc_state = ipc2_state_1
+	st		r0, ipc_state		; ...
+	ld		r0, ipc_stat		; get command type
+	add		r0, r0				; make it a WORD index
+	add		r0, #red2_tbl		; add the table offset
+	ld		r0, [r0]			; get the reduction routine address
+	br		[r0]				; dispatch to the reduction routine  (it returns)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipcb_state_2() -- both voices parser state 2
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipcb_state_2(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_state_0()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	ipcb_state_2
+
+ipcb_state_2:
+
+	ldbze	r0, 2[sp]			; get the input byte
+	jbc		r0, 7, ibs2a		; check for a command
+
+	ljmp	ipc_state_0			; go process command byte if present
+
+ibs2a:
+
+	st		r0, ipc_byte2		; stash input byte in ipc_byte2
+	ld		r0, #ipcb_state_1	; ipc_state = ipc2_state_1
+	st		r0, ipc_state		; ...
+	ld		r0, ipc_stat		; get command type
+	add		r0, r0				; make it a WORD index
+	add		r0, #redb_tbl		; add the table offset
+	ld		r0, [r0]			; get the reduction routine address
+	br		[r0]				; dispatch to the reduction routine  (it returns)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	id_req_state() -- ID request parser state
+;+;
+;+;	Prototype:
+;+;
+;+;		void id_req_state(dbyte)
+;+;		BYTE dbyte;		input byte
+;+;
+;+;	Calls:
+;+;
+;+;		write_ipc
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออป
+; 	 2 บ dbyte   บ
+; 	   ฬอออออออออน
+; 	 0 บ RETURN  บ
+; 	   ศอออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	id_req_state
+
+id_req_state:
+
+	ldbze	r0, 2[sp]				; get the input byte
+	cmp		r0, vid1				; check against voice A ID
+	je		idrq1					; go respond if it's us
+
+	cmp		r0, vid2				; check against voice B ID
+	jne		idrq2					; skip response if not us
+
+idrq1:
+
+	lcall	write_ipc				; write_ipc(dbyte) -- dbyte still on stack
+
+idrq2:
+
+	ld		r0, #ipc_state_0		; ipc_state = ipc_state_0
+	st		r0, ipc_state			; ...
+
+	ret								; return
+
+; ----------------------------------------------------------------------------
+; jump table for switch (ipc_stat) cases in ipc_state_0()
+; ----------------------------------------------------------------------------
+
+is0jt:	dcw	is0d		; case 0 -- set voice part or channel
+		dcw	is0h		; case 1 -- part specific function request
+		dcw	is0d		; case 2 -- gate/ungate note
+		dcw	is0h		; case 3 -- preset parameter
+		dcw	is0h		; case 4 -- user modulation
+		dcw	is0g		; case 5 -- performance parameter
+		dcw	is0d		; case 6 -- voice specific function request
+		dcw	is0m		; case 7 -- id request
+
+; The End --------------------------------------------------------------------
+
+	end

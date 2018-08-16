@@ -1,0 +1,1649 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		HDW.A
+;+;	Purpose:	OB-MX Hardware interfaces, processor reserved memory, etc.
+;+;	Original:		1993-05-26	D.N. Lynx Crowe
+;+;	Revision:	97	1994-06-14	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		background()	main loop background processing (never returns)
+;+;		do_port			do portamento processing
+;+;		flush_hsi()		flush the HSI FIFO
+;+;		hdw_go()		enable interrupts
+;+;		get_id()		get voice board pair ID
+;+;		init_adata()	initialize RAM
+;+;		init_hdw()		initialize hardware
+;+;		init_regs()		initialize all register variables
+;+;		ipc_flush()		flush the IPC buffers
+;+;		ipc_isr_in		IPC receiver interrupt handler
+;+;		ipc_isr_out		IPC transmitter interrupt handler
+;+;		start_timer()	start software timer 0
+;+;		timer_isr		software timer 0 interrupt handler
+;+;		write_cv()		write a value to a CV
+;+;		write_ipc()		write a byte to the IPC
+;+;
+;+;		no_int_badop	Unimplemented opcode
+;+;		no_int_trap		Trap
+;+;		no_int_vec1		A/D conversion complete
+;+;		no_int_vec3		HSO event
+;+;		no_int_vec4		HSI.0 pin
+;+;		no_int_vec6		Serial port
+;+;		no_int_vec7		EXTINT
+;+;		no_int_vec10	HSI 4'th entry into HSI FIFO
+;+;		no_int_vec11	TIMER2 capture
+;+;		no_int_vec12	TIMER2 overflow
+;+;		no_int_vec13	EXTINT1
+;+;		no_int_vec14	HSI FIFO full
+;+;		no_int_vec15	NMI
+;+;		no_int_vect		Bad interrupt handler
+;+;
+;+;		bflag			background timer flag
+;+;		calref			calibration reference flag
+;+;		diagmode		diagnostic mode flag
+;+;		if_end			IPC FIFO tail pointer
+;+;		if_start		IPC FIFO head pointer
+;+;		intune			tuning in progress flag
+;+;		ioc0_img		IOC0 image
+;+;		ioc1_img		IOC1 image
+;+;		ioc2_img		IOC2 image
+;+;		ipc_byte1		IPC message byte 1
+;+;		ipc_byte2		IPC message byte 2
+;+;		ipc_obuf		IPC output buffer
+;+;		old_hso_cmd		previous HSO command
+;+;		port2_img		IO_PORT2 image
+;+;		r_crash			bad interrupt code
+;+;		r_mstime		wait timer
+;+;		sflag			skip MODs flag
+;+;		stwat_flag		"stop the world and tune" flag
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;*	{Ch 1}	1994-04-11	D.N. Lynx Crowe
+;*	{Ch 1}	removed reference to sflag in background() when processing ENVs
+
+;*	{Ch 2}	1994-04-11	D.N. Lynx Crowe
+;*	{Ch 2}	removed debug flag references from background()
+
+;*	{Ch 3}	1994-05-16	D.N. Lynx Crowe
+;*	{Ch 3}	changed DAC reference switch delay to 30 microseconds from 10
+
+;*	{Ch 4}	1994-05-16	D.N. Lynx Crowe
+;*	{Ch 4}	added DAC reference switch delay to CV pairs 34-38
+
+;*	{Ch 5}	1994-05-17	D.N. Lynx Crowe
+;*	{Ch 5}	added nops to timer_isr DAC update between ei/di pairs
+
+;*	{Ch 6}	1994-05-17	D.N. Lynx Crowe
+;*	{Ch 6}	added ei/di pairs around the %wait30 macros
+
+;*	{Ch 7}	1994-05-17	D.N. Lynx Crowe
+;*	{Ch 7}	added hsi_isw register variable for touchup() and hsi_dav_isr
+
+;*	{Ch 8}	1994-05-19	D.N. Lynx Crowe
+;*	{Ch 8}	added tovf_isr to handle more precise timing using timer 1
+
+;*	{Ch 9}	1994-05-19	D.N. Lynx Crowe
+;*	{Ch 9}	removed tovf_isr
+
+;*	{Ch 10}	1994-06-03	D.N. Lynx Crowe
+;*	{Ch 10}	changed intune to control SIO interrupts for tuning
+
+;*	{Ch 11}	1994-06-07	D.N. Lynx Crowe
+;*	{Ch 11}	updated comments, added conditional assembly for SIO interrupts
+
+	name	hdw
+
+	lstout-
+
+$REG8096.INC
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+DISINT		equ		0			; non-zero disables SIO during tuning
+
+	extern	do_env
+	extern	do_lfo
+	extern	do_mods
+	extern	handle_ipc
+	extern	hsi_dav_isr
+	extern	tuner
+
+	extern	cvtable
+	extern	dacmap
+	extern	hsicount
+	extern	ipc_fifo
+	extern	v
+	extern	vid1
+
+;+ ---------------------------------------------------------------------------
+
+;+;	Note:  If CRASH NE 0, the %crash macro will cause a crash ID to be stored
+;+;	in r_crash for debugging.  If CRASH EQ 0, no crash ID will be stored.
+
+CRASH		equ		0
+
+;+ ---------------------------------------------------------------------------
+
+TIMER_RATE	equ		2276			; 3.034666667 ms Software Timer 0 count
+
+BAUD_VAL1	equ		5				; baud rate LSB (for 125000 baud)
+BAUD_VAL2	equ		080H			; baud rate MSB (source = XTAL1)
+
+RI_BIT		equ		00000010B		; INT_MASK1: RI interrupt bit
+TI_BIT		equ		00000001B		; INT_MASK1: TI interrupt bit
+
+IMASK1		equ		RI_BIT			; INT_MASK1 during timer isr
+
+TIMER_BIT	equ		00100000B		; INT_MASK: software timer interrupt bit
+HSIDAV_BIT	equ		00000100B		; INT_MASK: HSI DAV interrupt bit
+TOVF_BIT	equ		00000001B		; INT_MASK: Timer overflow interrupt bit
+
+IPC_SEL		equ		00100000B		; IPC bus control bit
+
+HSI_DSBL	equ		10101010B		; HSI disable mask	(AND with IOC0)
+
+;+ ---------------------------------------------------------------------------
+;+ CCR													11001000
+;+
+;+   0: powerdown mode						disabled	       0
+;+   1: select 8 or 16-bit bus				8 bit		      0
+;+   2: select write strobe mode			WR			     0
+;+   3: select address valid strobe			ALE			    1
+;+ 4-5: internal ready control (IRC)		1 wait	      00
+;+ 6-7: program lock						none		11
+;+ ---------------------------------------------------------------------------
+
+CCR_VALUE			equ									11001000B
+
+;+ ---------------------------------------------------------------------------
+;+ IOC0													00000000
+;+
+;+   0: HSI.0 input							enabled		       0
+;+   1: TIMER2 reset on write				disabled	      0
+;+   2: HSI.1 input							enabled		     0
+;+   3: TIMER2 ext reset					disabled	    0
+;+   4: HSI.2 input							enabled		   0
+;+   5: TIMER2 reset source					T2RST		  0
+;+   6: HSI.3 input							enabled		 0
+;+   7: TIMER2 clk source					T2CLK		0
+;+ ---------------------------------------------------------------------------
+
+IOC0_VALUE		equ										00000000B
+
+;+ ---------------------------------------------------------------------------
+;+ IOC1													00100000
+;+
+;+   0: select PWM output/P2.5				P2.5		       0
+;+   1: select external interrupt source	extint		      0
+;+   2: enable TIMER1 overflow interrupt	disabled         0
+;+   3: enable TIMER2 overflow interrupt	disabled        0
+;+   4: enable HSO.4 pin as output			disabled	   0
+;+   5: select P2.0/TXD output				TXD			  1
+;+   6: enable HSO.5 pin as output			disabled	 0
+;+   7: select HSI interrupt source			hold_reg	0
+;+ ---------------------------------------------------------------------------
+
+IOC1_VALUE		equ										00100000B
+
+;+ ---------------------------------------------------------------------------
+;+ IOC2													01000000
+;+
+;+	0: enable fast increment of T2						       0
+;+	1: enable T2 as up/down counter						      0
+;+	2: enable /2 prescaler on PWMs						     0
+;+	3: enable 80C196KC a/d modes						    0
+;+	4: A/D clock prescaler disable						   0
+;+	5: T2 alternate interrupt @ 08000H					  0
+;+	6: enable locked HSO CAM entries					 1
+;+	7: clear entire HSO CAM								0
+;+ ---------------------------------------------------------------------------
+
+IOC2_VALUE		equ										01000000B
+
+;+ ---------------------------------------------------------------------------
+;+ SP_CON												00001001
+;+
+;+ 0-1: mode selection						mode1		      01
+;+   2: parity enable (puts it in D7!!)		disabled	     0
+;+   3: receiver enable						enabled		    1
+;+   4: transmit 9th data bit				clear		   0
+;+ 5-7: reserved							000			000
+;+ ---------------------------------------------------------------------------
+
+SPCON_VALUE		equ										00001001B
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	aregs(1)			; REGISTERS -- 48/50 bytes -- GLOBAL & LOCAL
+
+	public	bflag				; VAR in aregs	WORD
+	public	calref				; VAR in aregs	WORD
+	public	diagmode			; VAR in aregs	WORD
+	public	hsi_isw				; VAR in aregs	WORD
+	public	if_start			; VAR in aregs	WORD
+	public	if_end				; VAR in aregs	WORD
+	public	intune				; VAR in aregs	WORD
+	public	ioc0_img			; VAR in aregs	BYTE
+	public	ioc1_img			; VAR in aregs	BYTE
+	public	ioc2_img			; VAR in aregs	BYTE
+	public	ipc_byte1			; VAR in aregs	WORD
+	public	ipc_byte2			; VAR in aregs	WORD
+	public	port2_img			; VAR in aregs	BYTE
+	public	r_crash				; VAR in aregs	WORD
+	public	r_mstime			; VAR in aregs	WORD
+	public	sflag				; VAR in aregs	WORD
+	public	stwat_flag			; VAR in aregs	WORD
+
+;+ ----- global register variables -------------------------------------------
+
+if_start:		dsw		1		; IPC FIFO head pointer
+if_end:			dsw		1		; IPC FIFO tail pointer
+
+ipc_byte1:		dsw		1		; IPC message byte 1
+ipc_byte2:		dsw		1		; IPC message byte 2
+
+;+ ----------------------------------------------------------------------------
+
+intune:			dsw		1		; tuning in progress flag
+
+;+ ---------------------------------------------------------------------------
+;+ bits in intune:
+;+
+;+ BIT0	disables ENV, LFO, MOD processing
+;+ BIT1	enables HSI interrupts in the timer isr
+;+ BIT2 disables SIO interrupts in the timer isr
+;+ BIT3..BIT15 are unused and must be zero
+;+
+;+ intune is set to 7 while actually tuning, and to 3 after tuning is done,
+;+ while waiting for the IPC.  It is set to zero when tune exits.
+;+ ---------------------------------------------------------------------------
+
+diagmode:		dsw		1		; diagnostic mode flag
+
+;+ ---------------------------------------------------------------------------
+;+ bits in diagmode:
+;+
+;+ BIT0..BIT7	disable ENV, LFO, MOD processing if non-zero (for IPC message)
+;+ BIT8..BIT15	disable ENV, LFO, MOD processing if non-zero (for QuadPot setting)
+;+ ---------------------------------------------------------------------------
+
+stwat_flag:		dsw		1		; "stop the world and tune" if non-zero
+
+;+ ---------------------------------------------------------------------------
+
+hsi_isw:		dsw		1		; HSI interrupt mode switch
+
+;+ bit 0 = 0 = measure 1 period
+;+ bit 0 = 1 = measure 32 periods
+
+;+ ---------------------------------------------------------------------------
+
+r_crash:		dsw		1		; stray interrupt crash register for DEBUG
+r_mstime:		dsw		1		; wait time counter
+
+bflag:			dsw		1		; background timer flag (clock ticked)
+calref:			dsw		1		; calibration reference flag
+sflag:			dsw		1		; skip MOD cycle flag  (clock ticked in MOD)
+
+ioc0_img:		dsb		1		; IOC0 port image
+ioc1_img:		dsb		1		; IOC1 port image
+ioc2_img:		dsb		1		; IOC2 port image
+port2_img:		dsb		1		; IO_PORT2 image
+
+;+ ----- local register variables --------------------------------------------
+
+r_wis:			dsw     1		; write_ipc -- scratch
+
+ipcouthead:     dsw     1		; ipc_isr_out -- IPC output FIFO head pointer
+ipcouttail:     dsw     1		; ipc_isr_out -- IPC output buffer tail pointer
+
+r_inp:			dsw     1		; ipc_isr_in -- scratch
+
+x1:				dsw		1		; timer_isr -- DAC pointer
+x2:				dsw		1		; timer_isr -- cvtable pointer
+x3:				dsw		1		; timer_isr -- loop counter
+x4:				dsw		1		; timer_isr -- scratch
+hsocount:		dsw		1		; timer_isr -- HSO next-time counter
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	cregs(1)			; REGISTERS -- 10 bytes -- C LOCALS
+
+c_regs:			dsb		10		; C working registers  (defined in REG8096.INC)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	ctemp(1)			; REGISTERS -- 22 bytes -- C LOCALS
+
+c_tmps:			dsb		22		; C register variables
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg    adata(1)
+
+	public	ipc_obuf			; VAR in adata	CHAR []
+
+ipc_obuf:		dsb		128		; IPC output buffer
+ipc_obuf_end:					; end of IPC buffer +1
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;	define interrupt vectors and ccb
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	aseg			; HARDWARE vectors, etc.
+
+;+ ----- lower interrupt vectors ---------------------------------------------
+
+	org		2000H			; lower interrupt vectors
+
+	dcw		no_int_vec0		; 2000H -- INT00 -- Timer overflow
+	dcw		no_int_vec1		; 2002H -- INT01 -- A/D conversion complete
+	dcw     hsi_dav_isr		; 2004H -- INT02 -- HSI data available
+	dcw		no_int_vec3		; 2006H -- INT03 -- HSO event
+	dcw		no_int_vec4		; 2008H -- INT04 -- HSI.0 pin
+	dcw     timer_isr		; 200AH -- INT05 -- Software timer
+	dcw		no_int_vec6		; 200CH -- INT06 -- Serial port
+	dcw		no_int_vec7		; 200EH -- INT07 -- EXTINT
+
+;+ ----- special interrupt vectors -------------------------------------------
+
+	dcw		no_int_trap		; 2010H -- INT16 -- Trap
+	dcw		no_int_badop	; 2012H -- INT17 -- Unimplemented opcode
+
+;+ ----- CCB value -----------------------------------------------------------
+
+	org		2018H
+
+	dcb		CCR_VALUE		; 2018H -- LSB of CCR
+	dcb		020H			; 2019H -- MSB of CCR (MUST BE 020H)
+
+;+ ----- upper interrupt vectors ---------------------------------------------
+
+	org		2030H
+
+	dcw     ipc_isr_out		; 2030H -- INT08 -- IPC TI interrupt
+	dcw     ipc_isr_in		; 2032H -- INT09 -- IPC RI interrupt
+	dcw     no_int_vec10	; 2034H -- INT10 -- HSI 4'th entry into HSI FIFO
+	dcw		no_int_vec11	; 2036H -- INT11 -- TIMER2 capture
+	dcw		no_int_vec12	; 2038H -- INT12 -- TIMER2 overflow
+	dcw		no_int_vec13	; 203AH -- INT13 -- EXTINT1
+	dcw     no_int_vec14	; 203CH -- INT14 -- HSI FIFO full
+	dcw		no_int_vec15	; 203EH -- INT15 -- NMI
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ %debugf -- macro to turn off the debug flag
+;+ ---------------------------------------------------------------------------
+;+ This macro is used for debugging and calibration reference.
+;+
+;+ This turns the debug LED on  (it's inverted logic)
+;+ ---------------------------------------------------------------------------
+
+	macro	%debugf			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #002H				; turn off hso.2 for debugging
+	add		HSO_TIME, TIMER1, #3			; ----------------------------
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %debugn -- macro to turn on the debug flag
+;+ ---------------------------------------------------------------------------
+;+ This macro is used for debugging and calibration reference.
+;+
+;+ This turns the debug LED off  (it's inverted logic)
+;+ ---------------------------------------------------------------------------
+
+	macro	%debugn			; {no arguments}
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldb		HSO_COMMAND, #022H				; turn on hso.2 for debugging
+	add		HSO_TIME, TIMER1, #3			; ---------------------------
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %wait30 -- macro to wait 30 microseconds  (180 states)
+;+ ---------------------------------------------------------------------------
+;+ This macro eats up time for about 30 microseconds for DAC reference settling.
+;+ Warning: Clobbers x3
+;+ ---------------------------------------------------------------------------
+
+	macro	%wait30			; {no arguments}
+
+	ldb		x3, #19			; setup loop count					{4}
+
+wm_\@:
+
+	djnz	x3, wm_\<		; 1.5 microseconds / loop			{5/9}
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %crash -- hard halt from a bad interrupt
+;+ ---------------------------------------------------------------------------
+;+
+;+ NOTE: in the final production version this macro should probably re-start
+;+ the instrument instead of coming to a grinding halt...
+;+
+;+ We had to have a good spot to trap on with the emulator for crashes,
+;+ and no_int_vect is it.  One could modify this macro or no-int-vect to
+;+ jump to 0x2080 after stashing r_crash somewhere recoverable, like maybe
+;+ one of the QuadPot EEROM locations...
+;+
+;+ r_crash contains the interrupt source number for debug purposes.
+;+ ---------------------------------------------------------------------------
+
+	macro	%crash			; <vector>
+
+	if		CRASH
+
+	di										; kill all interrupts
+	ld		r_crash, #\0+0100H				; indicate crash source
+	sjmp	no_int_vect						; go into IDLE mode
+
+	endif
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	acode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	background() -- main loop background processing
+;+;
+;+;	Prototype:
+;+;
+;+;		void background()
+;+;
+;+;	Calls:
+;+;
+;+;		do_env()
+;+;		do_lfo()
+;+;		do_mods()
+;+;		do_port()
+;+;		handle_ipc()
+;+;		tuner()
+;+;	
+;+;	This gets entered, but never returns.  It's the main scan loop.
+;+;
+;+;	We loop waiting for timer_isr() to set bflag so we know a tick has passed.
+;+;	When a tick passes, we process all of the timer driven events, such as
+;+;	ENVs and LFOs, and do the modulations.  We also check the IPC FIFO here.
+;+;	This is also the driver for portatmento.
+;+;
+;+;	r0 .. r9 get trashed herein.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	background		; void background()
+
+background:
+
+	cmp		bflag, 0						; check the timer flag
+	je		background						; hang out until it's set
+
+	clr		bflag							; clear the timer flag
+
+; --- TUNER processing ------------------------------------------------------
+
+	add		r0, 0, <stwat_flag				; see if tuning was requested
+	je		notune							; jump if not
+
+	lcall	tuner							; "Tune it, Damn it!"
+
+	st		0, stwat_flag					; clear the tuning flag
+
+notune:
+
+; --- IPC processing --------------------------------------------------------
+
+	lcall	handle_ipc						; empty the IPC FIFO
+
+; --- PORTAMENTO processing --------------------------------------------------
+
+	add		r0, diagmode, <intune			; check flags: diagmode, intune,
+	jne		skip_prt						; skip portamento if any flag set
+
+	lcall	do_port							; process portamento
+
+skip_prt:
+
+; --- LFO processing --------------------------------------------------------
+
+	add		r0, diagmode, <intune			; check flags: diagmode, intune,
+	jne		skip_lfo						; skip LFOs if any flag set
+
+	lcall	do_lfo							; process the LFOs
+
+skip_lfo:
+
+; --- MOD processing --------------------------------------------------------
+
+	add		r0, diagmode, <intune			; check flags: diagmode, intune,
+	add		r0, <sflag						; ... sflag, and
+	jne		skip_mod						; skip MODs if any flag set
+
+	lcall	do_mods							; process the MODs
+
+skip_mod:
+
+; --- ENV processing --------------------------------------------------------
+
+	add		r0, diagmode, <intune			; check flags: diagmode, intune
+	jne		skip_env						; skip ENVs if any flag set
+
+	lcall	do_env							; process the ENVs
+
+skip_env:
+
+; ---------------------------------------------------------------------------
+
+	ld		sflag, <bflag					; skip MODs next time if late
+
+; ---------------------------------------------------------------------------
+
+	ljmp	background						; go do it somemore
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	init_adata() -- initialize RAM
+;+;
+;+;	Prototype:
+;+;
+;+;		void init_adata()
+;+;
+;+;	This function clears all of the assembly code RAM in adata.  The adata
+;+;	segment is where the assembly code allocates variables.  To keep things
+;+;	consistent with C conventions, we clear it when the program is started.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	init_adata		; void init_adata()
+
+init_adata:
+
+	push	r2							; save r2
+	ld		r0, #sfb(adata)				; start of RAM variables
+	ld		r2, #sfe(adata+1)			; end of RAM variables
+
+	sjmp	clear_it					; let init_regs do the dirty work
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	init_regs() -- initialize all register variables
+;+;
+;+;	Prototype:
+;+;
+;+;		void init_regs()
+;+;
+;+;	We clear all of the register variables here to keep consistent with
+;+;	C conventions.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	init_regs		; void init_regs()
+
+init_regs:
+
+	push	r2							; save r2
+	ld		r0, #sfb(aregs)				; start of REGISTER variables
+	ld		r2, #sfe(aregs+1)			; end of REGISTER variables
+
+; ---------------------------------------------------------------------------
+; clear_it is an entry point into init_regs() for init_adata(), as well as
+; being the beginning of the tight loop that does the clearing.
+;
+; At this point, r0 points at the first (current) byte to be cleared, and
+; r2 points at the first byte PAST the area to be cleared.
+;
+; r0 will be tested against r2 before each byte is cleared, and when r0 = r2
+; we're done.
+;
+; clear_done is provided as a break-point target so that any debug setups
+; can be done after RAM and register variables have been cleared.
+; ---------------------------------------------------------------------------
+
+clear_it:
+
+	cmp		r0, r2						; "Are we there yet ?"
+	je		ir_done						; we're done if so
+
+	stb		0, [r0]+					; clear a BYTE of (register) RAM
+	sjmp	clear_it					; go see if we're done
+
+ir_done:
+
+	pop		r2							; restore r2
+
+	public	clear_done					; a good place for a break-point...
+
+clear_done:
+
+	ret									; we're outa' here
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	init_hdw() -- initialize hardware
+;+;
+;+;	Prototype:
+;+;
+;+;		void init_hdw()
+;+;
+;+;	Calls:
+;+;
+;+;		ipc_flush()
+;+;		start_timer()
+;+;
+;+;	Note: interrupts are expected to be off at this point, but just to be
+;+;	certain we disable them on entry, since we're setting up hardware.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	init_hdw		; void init_hdw()
+
+init_hdw:
+
+	di		; --- HARDWARE SETUP -- DISABLE INTERRUPTS ----------------------
+
+	st		0, <r_crash					; indicate not crashed
+
+	stb 	0, WSR						; select window 0
+
+	ldb     ioc0_img, #IOC0_VALUE		; setup IOC0
+	ldb     IOC0, <ioc0_img				; ...
+
+	ldb		ioc1_img, #IOC1_VALUE		; setup IOC1
+	ldb		IOC1, <ioc1_img				; ...
+
+	ldb		ioc2_img, #IOC2_VALUE		; setup IOC2
+	ldb		IOC2, <ioc2_img				; ...
+
+	st		0, <diagmode				; reset flags
+	st		0, <intune					; ...
+	st		0, <stwat_flag				; ...
+	st		0, <hsi_isw					; ...
+
+	ldb		port2_img, #IPC_SEL			; initialize IO_PORT2
+	ldb		IO_PORT2, <port2_img		; ...
+
+	scall	ipc_flush					; flush IPC buffers
+
+	ldb 	SP_CON, #SPCON_VALUE		; initialize sp_con register
+
+	ldb     BAUD_RATE, #BAUD_VAL1		; initialize baud rate
+	ldb     BAUD_RATE, #BAUD_VAL2		; ...
+
+	andb	INT_PEND1, #not(RI_BIT)		; clear any pending rcv interrupt
+	orb     INT_MASK1, #RI_BIT			; enable rcv interrupt
+
+	lcall	start_timer					; reset the timer
+
+	andb	INT_PENDING, #not(TIMER_BIT)	; clear any old timer interrupt
+	orb     INT_MASK, #TIMER_BIT		; enable timer interrupt
+
+	ret									; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	hdw_go() -- enable interrupts
+;+;
+;+;	Prototype:
+;+;
+;+;		void hdw_go()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	hdw_go			; void hdw_go()
+
+hdw_go:
+
+	ei									; ENABLE INTERRUPTS
+
+	ret									; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc_flush() -- flush the IPC buffers
+;+;
+;+;	Prototype:
+;+;
+;+;		void ipc_flush()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	ipc_flush		; void ipc_flush()
+
+ipc_flush:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	orb		port2_img, #IPC_SEL			; release serial bus
+	ldb		IO_PORT2, <port2_img		; ...
+
+	clr		if_start					; reset input buffer pointers
+	clr		if_end						; ...
+
+	ld		ipcouthead, #ipc_obuf		; reset output buffer pointers
+	ld		ipcouttail, <ipcouthead		; ...
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	flush_hsi() -- flush the HSI FIFO
+;+;
+;+;	Prototype:
+;+;
+;+;		void flush_hsi()
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	flush_hsi		; void flush_hsi()
+
+flush_hsi:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	andb	ioc0_img, #HSI_DSBL				; disable HSI input lines
+	stb		ioc0_img, IOC0
+
+	andb	ioc1_img, #not(BIT6)			; IOC1.6 = 0 -- disable SDA output
+	ldb		IOC1, <ioc1_img					; ... on HSO.5/HSI.3
+
+	andb	INT_MASK, #not(BIT2)			; clear HSI DAV interrupt enable
+
+hsiflush:
+
+	ld		r0, HSI_TIME					; clear an event
+	skip	0								; delay for FIFO ripple through
+	skip	0								; ...
+	jbs		IOS1, 7, hsiflush				; loop unti FIFO is clear
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	write_ipc() -- write a byte to the IPC
+;+;
+;+;	Prototype:
+;+;
+;+;		void write_ipc(ipcbyte)
+;+;		BYTE ipcbyte;
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	write_ipc		; void write_ipc(ipcbyte)
+
+write_ipc:
+
+	jbc		SP_STAT, 3, wipc_queue			; queue data if tx busy
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	andb	port2_img, #not(IPC_SEL)		; grab serial bus
+	ldb		IO_PORT2, <port2_img			; ...
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	orb		INT_MASK1, #TI_BIT				; enable transmit interrupt
+
+	ldb		SBUF, 2[sp]						; send the byte
+
+	sjmp	wipc_done						; done -- restore ints and return
+
+wipc_queue:
+
+	ldb		r_wis, 2[sp]					; stash byte in output FIFO
+	stb		r_wis, [ipcouthead]+
+
+	cmp		ipcouthead, #ipc_obuf_end		; see if we should wrap the pointer
+	jne		wipc_done						; done if not
+
+	ld		ipcouthead, #ipc_obuf			; wrap the FIFO pointer
+
+wipc_done:
+
+	ret										; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	get_id() -- get voice board pair ID
+;+;
+;+;	Prototype:
+;+;
+;+;		WORD get_id()
+;+;
+;+;	Returns 0x00 to 0x0A
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	get_id			; WORD get_id()
+
+get_id:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	ldbze	r0, IO_PORT0		; get voice ID bits
+	shr		r0, #3				; shift into LS bits
+	and		r0, #000EH			; mask to 3 bits
+	xor		r0, #000EH			; invert
+	sub		r0, #0002H			; subtract 1
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	write_cv() -- write a value to a CV
+;+;
+;+;	Prototype:
+;+;
+;+;		void write_cv(vb, cvnum, val)V
+;+;		BYTE vb;		voice index, VA or VB
+;+;		WORD cvnum;		CV number  (00..31)
+;+;		INT val;		value  (in low 12 bits, 11..00)
+;+;
+;+;	Trashes:	r0, r2, r4
+;+;
+;+;	Updates:	cvtable[dacmap[cvnum+(vb EQ VA ? 0 : 32)]]
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออออป
+; 	 6 บ val   arg บ
+; 	   ฬอออออออออออน
+; 	 4 บ cvnum arg บ
+; 	   ฬอออออออออออน
+; 	 2 บ vb    arg บ
+; 	   ฬอออออออออออน
+; 	 0 บ RETURN    บ
+; 	   ศอออออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	write_cv		; void write_cv(vb, cvnum, val)
+
+write_cv:
+
+	push	r0					; preserve registers
+	push	r2
+	push	r4
+
+; ----------------------------------------------------------------------------
+; Stack at this point:
+;
+; 	   ษอออออออออออป
+; 	12 บ val   arg บ
+; 	   ฬอออออออออออน
+; 	10 บ cvnum arg บ
+; 	   ฬอออออออออออน
+; 	 8 บ vb    arg บ
+; 	   ฬอออออออออออน
+; 	 6 บ RETURN    บ
+; 	   ฬอออออออออออน
+; 	 4 บ r0    old บ
+; 	   ฬอออออออออออน
+; 	 2 บ r2    old บ
+; 	   ฬอออออออออออน
+; 	 0 บ r4    old บ
+; 	   ศอออออออออออผ
+; ----------------------------------------------------------------------------
+
+	ld		r0, 12[sp]			; get val from stack
+	jbs		r0+1, 7, wcv_2		; done if it's negative  (no negative CVs)
+
+	ldbze	r2, 10[sp]			; get cvnum from stack
+	ldb		r4, 8[sp]			; get vb from stack
+	cmpb	r4, #1				; see if it's voice B
+	jne		wcv_1				; jump if not
+
+	add		r2, #32				; offset cvnum for voice B
+
+wcv_1:
+
+	ldbze	r4, dacmap[r2]		; get remapped CV number from dacmap[]
+	add		r4, r4				; make CV number a word offset
+	st		r0, cvtable[r4]		; store val in cvtable[]
+
+wcv_2:
+
+	pop		r4					; restore registers
+	pop		r2
+	pop		r0
+	ret							; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;					functions local to HDW.A
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	do_port -- do portamento processing
+;+;
+;+;	Not callable from C.
+;+;
+;+;	Trashes:
+;+;
+;+;		r_cur		r8
+;+;		r_val		r0
+;+;		r_valh		r2
+;+;		r_vp		r4
+;+;		r_op		r6
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+r_cur		equ		r8
+r_val		equ		r0
+r_valh		equ		r2
+r_vp		equ		r4
+r_op		equ		r6
+
+; ---------------------------------------------------------------------------
+
+do_port:
+
+; --- Voice A ----------------------------------------------------------------
+
+	ld		r_vp, #v							; point at the voice
+	add		r_cur, r_vp, #voice_curval			; point at vp->curval[]
+
+; --- VCO1 -------------------------------------------------------------------
+
+	add		r_op, r_vp, #voice_vcos				; point at VCO1
+
+	ld		r_val, (2*VT_VCO1_CNOTE)[r_cur]		; see if we're at the note
+	cmp		r_val, voice_note1[r_vp]			; ...
+	je		p_next1a							; done VCO1 if so
+
+	ld		r_val, vco_ptcnt[r_op]				; update the tick counter
+	dec		r_val								; ...
+	st		r_val, vco_ptcnt[r_op]				; ...
+	jgt		p_next1a							; done VCO1 if it's > 0
+
+	ld		r_val, vco_ptick[r_op]				; reset the tick counter
+	st		r_val, vco_ptcnt[r_op]				; ...
+
+	ld		r_val, vco_paccl[r_op]				; add the increment to the note
+	ld		r_valh, vco_pacch[r_op]				; ...
+	add		r_val, vco_pincl[r_op]				; ...
+	addc	r_valh, vco_pinch[r_op]				; ...
+	st		r_val, vco_paccl[r_op]				; update the accumulator
+	st		r_valh, vco_pacch[r_op]				; ...
+	shll	r_val, #2							; adjust incremented accumulator
+
+	cmp		0, vco_pinch[r_op]					; see which way we're going
+	jgt		p_decr1a							; jump if going down
+
+	cmp		r_valh, voice_note1[r_vp]			; see if we're at or beyond the note
+	jle		p_store1a							; go update note if not
+
+	sjmp	p_stuff1a							; go force note to final value
+
+p_decr1a:
+
+	cmp		r_valh, voice_note1[r_vp]			; see if we're at or beyond the note
+	jge		p_store1a							; go update note if not
+
+p_stuff1a:
+
+	ld		r_valh, voice_note1[r_vp]			; force note to final value
+
+p_store1a:
+
+	st		r_valh, (2*VT_VCO1_CNOTE)[r_cur]	; update note
+
+; --- VCO2 -------------------------------------------------------------------
+
+p_next1a:
+
+	add		r_op, #vco_size						; point at VCO2
+
+	ld		r_val, (2*VT_VCO2_CNOTE)[r_cur]		; see if we're at the note
+	cmp		r_val, voice_note2[r_vp]			; ...
+	je		p_nextv								; done VCO2 if so
+
+	ld		r_val, vco_ptcnt[r_op]				; update the tick counter
+	dec		r_val								; ...
+	st		r_val, vco_ptcnt[r_op]				; ...
+	jgt		p_nextv								; done VCO2 if it's > 0
+
+	ld		r_val, vco_ptick[r_op]				; reset the tick counter
+	st		r_val, vco_ptcnt[r_op]				; ...
+
+	ld		r_val, vco_paccl[r_op]				; add the increment to the note
+	ld		r_valh, vco_pacch[r_op]				; ...
+	add		r_val, vco_pincl[r_op]				; ...
+	addc	r_valh, vco_pinch[r_op]				; ...
+	st		r_val, vco_paccl[r_op]				; update the accumulator
+	st		r_valh, vco_pacch[r_op]				; ...
+	shll	r_val, #2							; adjust incremented accumulator
+
+	cmp		0, vco_pinch[r_op]					; see which way we're going
+	jgt		p_decr2a							; jump if going down
+
+	cmp		r_valh, voice_note2[r_vp]			; see if we're at or beyond the note
+	jle		p_store2a							; go update note if not
+
+	sjmp	p_stuff2a							; go force note to final value
+
+p_decr2a:
+
+	cmp		r_valh, voice_note2[r_vp]			; see if we're at or beyond the note
+	jge		p_store2a							; go update note if not
+
+p_stuff2a:
+
+	ld		r_valh, voice_note2[r_vp]			; force note to final value
+
+p_store2a:
+
+	st		r_valh, (2*VT_VCO2_CNOTE)[r_cur]	; update note
+
+; --- Voice B ----------------------------------------------------------------
+
+p_nextv:
+
+	ld		r_vp, #v+voice_size					; point at voice B
+	add		r_cur, r_vp, #voice_curval			; point at vp->curval[]
+
+; --- VCO1 -------------------------------------------------------------------
+
+	add		r_op, r_vp, #voice_vcos				; point at VCO1
+
+	ld		r_val, (2*VT_VCO1_CNOTE)[r_cur]		; see if we're at the note
+	cmp		r_val, voice_note1[r_vp]			; ...
+	je		p_next1b							; done VCO1 if so
+
+	ld		r_val, vco_ptcnt[r_op]				; update the tick counter
+	dec		r_val								; ...
+	st		r_val, vco_ptcnt[r_op]				; ...
+	jgt		p_next1b							; done VCO1 if it's > 0
+
+	ld		r_val, vco_ptick[r_op]				; reset the tick counter
+	st		r_val, vco_ptcnt[r_op]				; ...
+
+	ld		r_val, vco_paccl[r_op]				; add the increment to the note
+	ld		r_valh, vco_pacch[r_op]				; ...
+	add		r_val, vco_pincl[r_op]				; ...
+	addc	r_valh, vco_pinch[r_op]				; ...
+	st		r_val, vco_paccl[r_op]				; update the accumulator
+	st		r_valh, vco_pacch[r_op]				; ...
+	shll	r_val, #2							; adjust incremented accumulator
+
+	cmp		0, vco_pinch[r_op]					; see which way we're going
+	jgt		p_decr1b							; jump if going down
+
+	cmp		r_valh, voice_note1[r_vp]			; see if we're at or beyond the note
+	jle		p_store1b							; go update note if not
+
+	sjmp	p_stuff1b							; go force note to final value
+
+p_decr1b:
+
+	cmp		r_valh, voice_note1[r_vp]			; see if we're at or beyond the note
+	jge		p_store1b							; go update note if not
+
+p_stuff1b:
+
+	ld		r_valh, voice_note1[r_vp]			; force note to final value
+
+p_store1b:
+
+	st		r_valh, (2*VT_VCO1_CNOTE)[r_cur]	; update note
+
+; --- VCO2 -------------------------------------------------------------------
+
+p_next1b:
+
+	add		r_op, #vco_size						; point at VCO2
+
+	ld		r_val, (2*VT_VCO2_CNOTE)[r_cur]		; see if we're at the note
+	cmp		r_val, voice_note2[r_vp]			; ...
+	je		p_exit								; done VCO2 if so
+
+	ld		r_val, vco_ptcnt[r_op]				; update the tick counter
+	dec		r_val								; ...
+	st		r_val, vco_ptcnt[r_op]				; ...
+	jgt		p_exit								; done VCO2 if it's > 0
+
+	ld		r_val, vco_ptick[r_op]				; reset the tick counter
+	st		r_val, vco_ptcnt[r_op]				; ...
+
+	ld		r_val, vco_paccl[r_op]				; add the increment to the note
+	ld		r_valh, vco_pacch[r_op]				; ...
+	add		r_val, vco_pincl[r_op]				; ...
+	addc	r_valh, vco_pinch[r_op]				; ...
+	st		r_val, vco_paccl[r_op]				; update the accumulator
+	st		r_valh, vco_pacch[r_op]				; ...
+	shll	r_val, #2							; adjust incremented accumulator
+
+	cmp		0, vco_pinch[r_op]					; see which way we're going
+	jgt		p_decr2b							; jump if going down
+
+	cmp		r_valh, voice_note2[r_vp]			; see if we're at or beyond the note
+	jle		p_store2b							; go update note if not
+
+	sjmp	p_stuff2b							; go force note to final value
+
+p_decr2b:
+
+	cmp		r_valh, voice_note2[r_vp]			; see if we're at or beyond the note
+	jge		p_store2b							; go update note if not
+
+p_stuff2b:
+
+	ld		r_valh, voice_note2[r_vp]			; force note to final value
+
+p_store2b:
+
+	st		r_valh, (2*VT_VCO2_CNOTE)[r_cur]	; update note
+
+p_exit:
+
+	ret											; return to background()
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	start_timer() -- start software timer 0
+;+;
+;+;	Prototype:
+;+;
+;+;		void start_timer();
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+start_timer:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	andb	INT_PENDING, #not(TIMER_BIT)	; clear pending timer interrupt
+
+	ld		hsocount, #TIMER_RATE			; set HSO next-time
+
+	ldb     HSO_COMMAND, #018H				; start software timer 0
+	ld		HSO_TIME, <hsocount
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS -----------------
+
+	ret
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc_isr_in -- IPC receiver interrupt handler
+;+;
+;+;	Worst case times assume the longest instruction, NORML, 39 cycles.
+;+;	Average times assume 10 cycles for an average instruction.
+;+;
+;+;	One cycle = 166.667 nanoseconds
+;+;
+;+;	Interrupt latency takes:
+;+;
+;+;		61 cycles	10.166 microseconds (worst case)
+;+;		32 cycles	 5.333 microseconds (average) 
+;+;
+;+;	The interrupt handler takes:
+;+;
+;+;		72 cycles	12.000 microseconds
+;+;
+;+;	This gives a range of interrupt processing times of:
+;+;
+;+;		133 cycles	22.166 microseconds (worst case)
+;+;		104 cycles	17.333 microseconds (average)
+;+;
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ipc_isr_in:
+
+; ------------------------ START OF CRITICAL SECTION  ------------------------
+
+	pusha							; {18} DISABLE INTERRUPTS ----------------
+
+	ldb		r_inp, SBUF				; {4}  read IPC input port
+
+	ldb     BAUD_RATE, #BAUD_VAL1	; {5}  re-initialize baud rate ...
+	ldb     BAUD_RATE, #BAUD_VAL2	; {5}  ... per Intel data sheet 270815-003
+
+	inc		if_start				; {3}  stash byte in IPC input FIFO
+	and		if_start, #FMASK		; {5}  ...
+	stb		r_inp, ipc_fifo[if_start]	; {10}  ...
+
+	popa							; {18} RESTORE INTERRUPTS ----------------
+
+; ------------------------- END OF CRITICAL SECTION  -------------------------
+
+	ret								; {14} return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	ipc_isr_out -- IPC transmitter interrupt handler
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+ipc_isr_out:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ---------------
+
+	cmp     ipcouttail, <ipcouthead   		; check the output FIFO
+	be		ipcout_empty					; done if FIFO empty
+
+	ldb		SBUF, [ipcouttail]+				; send data
+
+	cmp		ipcouttail, #ipc_obuf_end		; see if we wrap pointer
+	bnc		ipcout_done						; jump if not
+
+	ld		ipcouttail, #ipc_obuf			; wrap pointer
+	sjmp	ipcout_done
+
+ipcout_empty:
+
+	andb	INT_MASK1, #not(TI_BIT)  	 	; turn off the transmit interrupt
+
+	orb		port2_img, #IPC_SEL				; release serial bus
+	ldb     IO_PORT2, <port2_img
+
+ipcout_done:
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS ------------
+
+	ret										; return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	timer_isr -- software timer 0 interrupt handler
+;+;
+;+;	Here we update the DACs and set bflag to indicate to the background()
+;+;	function that a timer period has passed.
+;+;
+;+;	This is also where other software timer, timer 2 reset, and A/D start
+;+;	interrupts end up.  We don't use them, though, so we just assume this
+;+;	interrupt's for us to save processing time...
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+timer_isr:
+
+	pusha	; {18} START OF CRITICAL SECTION -- DISABLE INTERRUPTS ----------
+
+; --- handle calibration reference turn-on ----------------------------------
+
+	cmp		0, calref						; check calibration ref flag
+	je		no_cal_on						; skip turn on if it's zero
+
+	%debugn									; turn on debug flag   (LED OFF)
+
+no_cal_on:
+
+; --- handle time-keeping ---------------------------------------------------
+
+	add		hsocount, #TIMER_RATE			; update next-time counter
+
+	ldb     HSO_COMMAND, #018H				; start software timer 0
+	ld		HSO_TIME, <hsocount				; ... with the next-time value
+
+	inc		bflag							; note the passage of time
+
+; --- interrupt mask setup --------------------------------------------------
+
+	if		DISINT
+	jbs		intune, 2, tunefix				; ignore SIO if tuning
+	endif
+
+	ldb		INT_MASK1, #IMASK1				; setup for SIO interrupts
+
+tunefix:
+
+	jbc		intune, 1, cvu_nohsi			; jump if debugging tuning
+
+	orb		INT_MASK, #HSIDAV_BIT			; make sure HSI gets in
+
+cvu_nohsi:
+
+; ---------------------------------------------------------------------------
+
+	ei		; --- ALLOW SIO/HSI IN -- RE-ENABLE INTERRUPTS ------------------
+
+; ---------------------------------------------------------------------------
+
+; --- HSI timeout processing ------------------------------------------------
+
+	jbc		intune, 1, not_hsi				; jump if we're not counting
+
+	inc		hsicount						; update the hsicount timer
+
+not_hsi:
+
+; --- Wait timer processing -------------------------------------------------
+
+	or		r_mstime, <r_mstime				; check wait timer
+	je		no_time							; jump if timed out
+
+	dec		r_mstime						; decrement timer
+
+no_time:
+
+; ---------------------------------------------------------------------------
+; --- DAC update processing -------------------------------------------------
+; ---------------------------------------------------------------------------
+
+; Since we interleave DAC outputs and S/H updates we start with the second
+; pair of CVs in the table to keep everything in sync.
+
+	ld		x1, #DAC_BASE					; point at DAC base
+	ld		x2, #cvtable+4					; point at CV table  (2nd pair)
+	ld		x3, #16							; setup loop count
+
+; --- CVs 0..30 -------------------------------------------------------------
+
+cvu1:
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	djnz	x3, cvu1						; loop for next CV pair
+
+; --- CV 32 -----------------------------------------------------------------
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference	{~Ch 3}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; ---------- start of {Ch 4} ------------------------------------------------
+
+; --- CV 34 -----------------------------------------------------------------
+
+	nop										; allow interrupts in		{+Ch 5}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference	{~Ch 3}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CV 36 -----------------------------------------------------------------
+
+	nop										; allow interrupts in		{+Ch 5}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference	{~Ch 3}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CV 38 -----------------------------------------------------------------
+
+	nop										; allow interrupts in		{+Ch 5}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference	{~Ch 3}
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CV 40 -----------------------------------------------------------------
+
+	nop										; allow interrupts in
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CV 42 -----------------------------------------------------------------
+
+	nop										; allow interrupts in
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CV 44 -----------------------------------------------------------------
+
+	nop										; allow interrupts in
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CV 46 -----------------------------------------------------------------
+
+	nop										; allow interrupts in
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	%wait30									; wait for DAC reference
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- CVs 48..60 ------------------------------------------------------------
+
+	ld		x3, #7							; setup loop count
+
+cvu2:
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+	djnz	x3, cvu2						; loop for next CV pair
+
+; --- CV 62 -----------------------------------------------------------------
+
+	ld		x2, #cvtable					; point at 1st CV pair
+
+	di		; --- DISABLE INTERRUPTS ----------------------------------------
+
+	ld		x4, [x2]+						; 1st word of CV pair
+	st		x4, [x1]+
+	ld		x4, [x2]+						; 2nd word of CV pair
+	st		x4, [x1]+
+	stb		x4, UPDATE_SH					; update the S/H
+	stb		x4, UPDATE_DAC					; update the DAC
+
+	ei		; --- ENABLE INTERRUPTS -----------------------------------------
+
+; --- handle calibration reference turn-off ---------------------------------
+
+	cmp		0, calref						; check calibration ref flag
+	je		no_cal_off						; skip turn off if it's zero
+
+	%debugf									; turn off debug flag  (LED ON)
+
+no_cal_off:
+
+; ---------------------------------------------------------------------------
+
+	popa	; {18} END OF CRITICAL SECTION -- RESTORE INTERRUPTS ------------
+
+	ret										; return to interrupted code
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	Stray interrupt handlers:
+;+;
+;+;	no_int_vec1		A/D conversion complete
+;+;	no_int_vec3		HSO event
+;+;	no_int_vec4		HSI.0 pin
+;+;	no_int_vec6		Serial port
+;+;	no_int_vec7		EXTINT
+;+;	no_int_vec10	HSI 4'th entry into HSI FIFO
+;+;	no_int_vec11	TIMER2 capture
+;+;	no_int_vec12	TIMER2 overflow
+;+;	no_int_vec13	EXTINT1
+;+;	no_int_vec14	HSI FIFO full
+;+;	no_int_vec15	NMI
+;+;	no_int_trap		Trap
+;+;	no_int_badop	Unimplemented opcode
+;+;
+;+;	Note:  If CRASH NE 0, the %crash macro will cause a crash ID to be stored
+;+;	in r_crash for debugging.  If CRASH EQ 0, no crash ID will be stored.
+;+;
+;+;	no_int_vec0 .. no_int_badop must directly preceed no_int_vect, as when
+;+;	CRASH EQ 0 no code is generated and the labels will be defined to point
+;+;	at no_int_vect.
+;+;
+;+;	The crash ID is of the form 01xxH, where xx is the vector number.
+;+;	This allows a zeroed r_crash to indicate that no crash has occurred.
+;+;
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+no_int_vec0:	%crash	0	; indicate crash source = Timer overflow
+
+no_int_vec1:	%crash	1	; indicate crash source = A/D conversion complete
+
+no_int_vec3:	%crash	3	; indicate crash source = HSO event
+
+no_int_vec4:	%crash	4	; indicate crash source = HSI.0 pin
+
+no_int_vec6:	%crash	6	; indicate crash source = Serial port
+
+no_int_vec7:	%crash	7	; indicate crash source = EXTINT
+
+no_int_vec10:	%crash	10	; indicate crash source = HSI 4'th entry into HSI FIFO
+
+no_int_vec11:	%crash	11	; indicate crash source = TIMER2 capture
+
+no_int_vec12:	%crash	12	; indicate crash source = TIMER2 overflow
+
+no_int_vec13:	%crash	13	; indicate crash source = EXTINT1
+
+no_int_vec14:	%crash	14	; indicate crash source = HSI FIFO full
+
+no_int_vec15:	%crash	15	; indicate crash source = NMI
+
+no_int_trap:	%crash	16	; indicate crash source = Trap
+
+no_int_badop:	%crash	17	; indicate crash source = Unimplemented opcode
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	no_int_vect -- Bad interrupt handler -- we should NEVER end up here
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+no_int_vect:
+
+	di										; DISABLE INTERRUPTS
+
+	if		CRASH
+
+	skip	0								; space to put a patch
+	skip	1
+	skip	2
+	skip	3
+
+	endif
+
+	idlpd	#IDLE_KEY						; go into IDLE mode
+
+	sjmp	no_int_vect						; branch and hang ...
+
+; The End --------------------------------------------------------------------
+
+	end
+ 

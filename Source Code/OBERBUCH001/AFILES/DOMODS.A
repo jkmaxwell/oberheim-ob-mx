@@ -1,0 +1,870 @@
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	File:		DOMODS.A
+;+;	Purpose:	OB-MX Modulation function
+;+;	Original:		1993-07-21	D.N. Lynx Crowe
+;+;	Revision:	63	1993-12-15	D.N. Lynx Crowe
+;+;
+;+;	Contents:
+;+;
+;+;		exec_mods()		do the modulations for a voice
+;+;		do_mods()		do the modulations
+;+;		mod_vca()		adjust VCA for LEVEL, ENV4 and MIDI levels
+;+;
+;+;	CAUTION:
+;+;
+;+;		The execution time and order of events in this module are
+;+;		critical to the successful operation of the instrument.
+;+;
+;+;		This has to be VERY fast code, as it's executed once per
+;+;		timer interrupt and processes each MOD data structure.
+;+;
+;+;		The numbers in {} are cycle times.
+;+;
+;+;		Change things here ONLY after VERY CAREFULLY considering timing
+;+;		and order of events.  A few extra cycles in the wrong place can
+;+;		wreck havoc on the response time of the instrument.
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	name	domods
+
+	lstout-
+
+$REG8096.inc
+$VOICE.INC
+
+	lstout+
+	locsym+
+	lstmac-
+
+	extern	a_v1_off
+	extern	a_v2_off
+	extern	a_mm_off
+	extern	a_ob_off
+	extern	b_v1_off
+	extern	b_v2_off
+	extern	b_mm_off
+	extern	b_ob_off
+	extern	cvtable
+	extern	tmtable
+	extern	v
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ cvtable[] offsets
+;+ ---------------------------------------------------------------------------
+
+DAC_A_VCO1	equ		2*32		; Voice A VCO1 Pitch
+DAC_A_VCO2	equ		2*36		; Voice A VCO2 Pitch
+
+DAC_A_MM	equ		2*40		; Voice A MM Frequency
+DAC_A_OB	equ		2*44		; Voice A OB Frequency
+
+DAC_A_VCA	equ		2*48		; Voice A VCA Level
+
+DAC_B_VCO1	equ		2*34		; Voice B VCO1 Pitch
+DAC_B_VCO2	equ		2*38		; Voice B VCO2 Pitch
+
+DAC_B_MM	equ		2*42		; Voice B MM Frequency
+DAC_B_OB	equ		2*46		; Voice B OB Frequency
+
+DAC_B_VCA	equ		2*50		; Voice B VCA Level
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ %mmset -- macro to setup a fixed modulation with a modulated multiplier
+;+ ---------------------------------------------------------------------------
+;+
+;+ r_mp		must point at the first Fixed MOD slot.
+;+ r_ovp	must point at &vp->outval[]
+;+
+;+ WARNING:  Trashes r_temp
+;+ Timing:	29 cycles
+;+ ---------------------------------------------------------------------------
+
+	macro	%mmset				; <slot:0..11>, <VT_index>
+
+	ld		r_temp, (2*\1)[r_ovp]				; {10}  get outval for the multiplier
+	shra	r_temp, #2							; {9}   adjust it into range
+	st		r_temp, (\0*mod_size)+mod_mlt[r_mp]	; {10}  store it in the MOD
+
+	endmac
+
+;+ ---------------------------------------------------------------------------
+;+ %umset -- macro to setup a user modulation
+;+ ---------------------------------------------------------------------------
+;+
+;+ r_mp		must point at the first User MOD slot.
+;+
+;+ WARNING:  Trashes r_srp, r_dsp, r_temp
+;+ Timing:	38 cycles
+;+ ---------------------------------------------------------------------------
+
+	macro	%umset				; <slot:0..11>
+
+	ld		r_srp, (\0*mod_size)+mod_cvp[r_mp]	; {10}  get the curval pointer
+	ld		r_dsp, (\0*mod_size)+mod_dsp[r_mp]	; {10}  get the outval pointer
+
+	ld		r_temp, [r_srp]						; {9}   get curval
+	st		r_temp, [r_dsp]						; {9}   store it in outval
+
+	endmac
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;+ ---------------------------------------------------------------------------
+;+ local registers for mod_vca()
+;+ ---------------------------------------------------------------------------
+
+;+ ---------------------------------------------------------------------------
+;+ WARNING:  These depend on TEMP+2 being on a LONG boundary
+;+ ---------------------------------------------------------------------------
+
+rm_val		equ		TEMP+2		; [ 0] accumulator for LEVEL * ENV4
+rm_valh		equ		TEMP+4		; [ 2] high word of accumulator
+
+rm_vpr		equ		TEMP+6		; [ 4] ENV4 value pointer / scratch
+rm_mvl		equ		TEMP+8		; [ 6] LEVEL value / scratch
+
+	rseg	aregs(2)			; REGISTERS -- 26 bytes -- LOCAL (domods.a)
+
+;+ ---------------------------------------------------------------------------
+;+ local registers for do_mods()
+;+ ---------------------------------------------------------------------------
+
+r_aval:		dsl		1			; [ 0] accumulator for src*mlt
+r_avalh		equ		r_aval+2	; [ 2] high word of accumulator
+
+r_vp:		dsw		1			; [ 4] VOICE pointer
+r_mp:		dsw		1			; [ 6] MOD pointer
+
+r_nm:		dsw		1			; [ 8] MOD counter
+r_mlt:		dsw		1			; [10] multiplier value
+
+r_src:		dsw		1			; [12] source (SRC) value
+r_srp:		dsw		1			; [14] source (SRC) pointer
+
+r_dsp:		dsw		1			; [16] destination (DST) pointer
+r_dac:		dsw		1			; [18] cvtable pointer
+
+r_cvp:		dsw		1			; [20] curval pointer
+r_ovp:		dsw		1			; [22] outval pointer
+
+r_temp:		dsw		1			; [24] scratch
+
+;+ --- debug access to do_mods() registers ------------------------------------
+
+	public	dm_regs				; REGISTERS -- 26 bytes -- DEBUG ACCESS (domods.a)
+
+dm_regs		equ		r_aval
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	rseg	hcode(1)
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	exec_mods() -- do the modulations for a voice
+;+;
+;+;	Not callable from C.
+;+;
+;+;	On entry:
+;+;
+;+;		r_vp		VOICE pointer
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	exec_mods			; void exec_mods() -- not callable from C
+
+exec_mods:
+
+;+ ***************************************************************************
+;+ IMPORTANT:  The user MODs must be setup BEFORE the fixed MODs, or they
+;+ will destroy the pitch and frequency setups done by the fixed MOD setup.
+;+ ***************************************************************************
+
+; ----------------------------------------------------------------------------
+; We start by setting up the pointers to vp->curval[] and vp->outval[]:
+;
+;	r_cvp	points at &vp->curval[]
+;	r_ovp	points at &vp->outval[]
+;
+; These remain the same throughout the remainder of exec_mods().
+; ----------------------------------------------------------------------------
+
+	add		r_cvp, r_vp, #voice_curval			; {6}   point at curval base
+	add		r_ovp, r_vp, #voice_outval			; {6}   point at outval base
+
+; ----------------------------------------------------------------------------
+; Just to make life interesting, we setup the MODULATED MULITPLIERS for
+; the VCO and VCF pitch FIXED MODULATIONS here.
+;
+; Note:  in this section of code,
+;
+;	r_temp		scratch
+;
+;	r_mp		points at Fixed MODs
+; ----------------------------------------------------------------------------
+
+	add		r_mp, r_vp, #voice_mods				; {6}   point at Fixed MODs
+
+	%mmset	0, VT_VCO1_LFO1FM					; {29}  LFO1 -> VCO1 Pitch
+	%mmset	1, VT_VCO1_ENV1FM					; {29}  ENV1 -> VCO1 Pitch
+
+	%mmset	2, VT_VCO2_LFO1FM					; {29}  LFO1 -> VCO2 Pitch
+	%mmset	3, VT_VCO2_ENV1FM					; {29}  ENV1 -> VCO2 Pitch
+
+	%mmset	8, VT_MM_LFO1FM						; {29}  LFO1 -> MM Freq
+	%mmset	9, VT_MM_ENV1FM						; {29}  ENV1 -> MM Freq
+
+	%mmset	10, VT_OB_LFO2FM					; {29}  LFO2 -> OB Freq
+	%mmset	11, VT_OB_ENV2FM					; {29}  ENV2 -> OB Freq
+
+; ----------------------------------------------------------------------------
+; Next, we setup the USER MODULATION destination current values.
+; There are N_UMODS of these, since each mod can have a different one.
+;
+; in this section of code,
+;
+;	r_mp		points at User MODs
+; ----------------------------------------------------------------------------
+
+umsetup:
+
+	add		r_mp, r_vp, #voice_mods+(N_FMODS*mod_size)	; {6}   point at User MODs
+
+	%umset	0									; {38}  setup user MOD 1
+	%umset	1									; {38}  setup user MOD 2
+	%umset	2									; {38}  setup user MOD 3
+	%umset	3									; {38}  setup user MOD 4
+	%umset	4									; {38}  setup user MOD 5
+	%umset	5									; {38}  setup user MOD 6
+	%umset	6									; {38}  setup user MOD 7
+	%umset	7									; {38}  setup user MOD 8
+	%umset	8									; {38}  setup user MOD 9
+	%umset	9									; {38}  setup user MOD 10
+	%umset	10									; {38}  setup user MOD 11
+	%umset	11									; {38}  setup user MOD 12
+
+; ----------------------------------------------------------------------------
+; Next, we setup the FIXED MODULATION destination current values.
+; There are 6 of these, and the destinations never change.
+;
+; Note:  in this section of code,
+;
+;	r_temp		scratch
+;
+;	r_srp		contains a constant of 0x7FFF
+;	r_dsp		contains a constant of 0x8001
+; ----------------------------------------------------------------------------
+
+mmsetup:
+
+	ld		r_srp, #07FFFH						; {5}   setup constant of 0x7FFF
+	ld		r_dsp, #08001H						; {5}   setup constant of 0x8001
+
+; ----------------------------------------------------------------------------
+; Setup VCO1_CNOTE current value and put it in vp->outval[VT_VCO1_CNOTE].
+; This takes into account: VT_VCO1_CNOTE, VT_VCO1_ADJUST, and VT_TRANSPOSE.
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_TRANSPOSE)[r_ovp]		; {10}  get vp->outval[VT_TRANSPOSE]
+	add		r_temp, (2*VT_VCO1_ADJUST)[r_ovp]	; {9}   add vp->outval[VT_VCO1_ADJUST]
+	jv		dm_ov1								; {4/8} jump on over/under-flow
+
+	add		r_temp, (2*VT_VCO1_CNOTE)[r_cvp]	; {9}   add vp->curval[VT_VCO1_CNOTE]
+	jnv		dm_nvt1								; {4/8} jump if no over/under-flow
+
+dm_ov1:
+
+	jlt		dm_unf1								; {4/8} jump if it's an underflow
+
+	ld		r_temp, <r_srp						; {4}   limit overflow to 0x7FFF
+	sjmp	dm_nvt1								; {7}   go store value
+
+dm_unf1:
+
+	ld		r_temp, <r_dsp						; {4}   limit underflow to 0x8001
+
+dm_nvt1:
+
+	st		r_temp, (2*VT_VCO1_CNOTE)[r_ovp]	; {10}  update vp->outval[VT_VCO1_CNOTE]
+
+; ----------------------------------------------------------------------------
+; Setup VCO2_CNOTE current value and put it in vp->outval[VT_VCO2_CNOTE].
+; This takes into account: VT_VCO2_CNOTE, VT_VCO2_ADJUST, and VT_TRANSPOSE.
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_TRANSPOSE)[r_ovp]		; {10}  get vp->outval[VT_TRANSPOSE]
+	add		r_temp, (2*VT_VCO2_ADJUST)[r_ovp]	; {9}   add vp->outval[VT_VCO2_ADJUST]
+	jv		dm_ov2								; {4/8} jump on over/under-flow
+
+	add		r_temp, (2*VT_VCO2_CNOTE)[r_cvp]	; {9}   add vp->curval[VT_VCO2_CNOTE]
+	jnv		dm_nvt2								; {4/8} jump if no over/under-flow
+
+dm_ov2:
+
+	jlt		dm_unf2								; {4/8} jump if it's an underflow
+
+	ld		r_temp, <r_srp						; {4}   limit overflow to 0x7FFF
+	sjmp	dm_nvt2								; {7}   go store value
+
+dm_unf2:
+
+	ld		r_temp, <r_dsp						; {4}   limit underflow to 0x8001
+
+dm_nvt2:
+
+	st		r_temp, (2*VT_VCO2_CNOTE)[r_ovp]	; {10}  update vp->outval[VT_VCO2_CNOTE]
+
+; ----------------------------------------------------------------------------
+; Setup MM_FREQ current value and put it in vp->outval[VT_MM_FREQ].
+; This takes into account: VT_MM_FREQ, VT_MM_ADJUST, and VT_TRANSPOSE.
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_TRANSPOSE)[r_ovp]		; {10}  get vp->outval[VT_TRANSPOSE]
+	add		r_temp, (2*VT_MM_FREQ)[r_cvp]		; {9}   add vp->curval[VT_MM_FREQ]
+	jv		dm_ov3								; {4/8} jump on over/under-flow
+
+	add		r_temp, (2*VT_MM_ADJUST)[r_cvp]		; {9}   add vp->curval[VT_MM_ADJUST]
+	jnv		dm_nvt3								; {4/8} jump if no over/under-flow
+
+dm_ov3:
+
+	jlt		dm_unf3								; {4/8} jump if it's an underflow
+
+	ld		r_temp, <r_srp						; {4}   limit overflow to 0x7FFF
+	sjmp	dm_nvt3								; {7}   go store value
+
+dm_unf3:
+
+	ld		r_temp, <r_dsp						; {4}   limit underflow to 0x8001
+
+dm_nvt3:
+
+	st		r_temp, (2*VT_MM_FREQ)[r_ovp]		; {10}  set vp->outval[VT_MM_FREQ]
+
+; ----------------------------------------------------------------------------
+; Setup OB_FREQ current value and put it in vp->outval[VT_OB_FREQ].
+; This takes into account: VT_OB_FREQ, VT_OB_ADJUST, and VT_TRANSPOSE.
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_TRANSPOSE)[r_ovp]		; {10}  get vp->outval[VT_TRANSPOSE]
+	add		r_temp, (2*VT_OB_FREQ)[r_cvp]		; {9}   add vp->curval[VT_OB_FREQ]
+	jv		dm_ov4								; {4/8} jump on over/under-flow
+
+	add		r_temp, (2*VT_OB_ADJUST)[r_cvp]		; {9}   add vp->curval[VT_OB_ADJUST]
+	jnv		dm_nvt4								; {4/8} jump if no over/under-flow
+
+dm_ov4:
+
+	jlt		dm_unf4								; {4/8} jump if it's an underflow
+
+	ld		r_temp, <r_srp						; {4}   limit overflow to 0x7FFF
+	sjmp	dm_nvt4								; {7}   go store value
+
+dm_unf4:
+
+	ld		r_temp, <r_dsp						; {4}   limit underflow to 0x8001
+
+dm_nvt4:
+
+	st		r_temp, (2*VT_OB_FREQ)[r_ovp]		; {10}  set vp->outval[VT_OB_FREQ]
+
+; ----------------------------------------------------------------------------
+; Setup the remaining FIXED MODULATION destination current values.
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_VCO1_PWIDTH)[r_cvp]	; {10}  setup VCO1_PWIDTH
+	st		r_temp, (2*VT_VCO1_PWIDTH)[r_ovp]	; {10}  ...
+
+	ld		r_temp, (2*VT_VCO2_PWIDTH)[r_cvp]	; {10}  setup VCO2_PWIDTH
+	st		r_temp, (2*VT_VCO2_PWIDTH)[r_ovp]	; {10}  ...
+
+; ----------------------------------------------------------------------------
+; Now, we calculate all of the fixed and user modulations.
+; This is the main loop in do_mods(), so it needs to be very efficient.
+;
+; Note:  in this section of code,
+;
+;	r_temp		scratch
+;
+;	r_mp		points at the current MOD
+;	r_srp		points at the source
+;	r_dsp		points at the destination
+;	r_dac		points at the cvtable[] entry
+;
+;	r_mlt		contains the multiplier
+;	r_src		contains the source
+;	r_aval		contains the product
+;	r_avalh		contains the modulated result
+; ----------------------------------------------------------------------------
+
+	add		r_mp, r_vp, #voice_mods				; {6}   setup r_mp for first MOD
+	ldbze	r_nm, #N_MODS						; {4}   setup MOD counter
+
+dm_mod_loop:
+
+	add		r_mlt, 0, mod_mlt[r_mp]				; {11}  get multiplier
+	je		dm_next								; {4/8} skip MOD if mult. is zero
+
+	ld		r_srp, mod_srp[r_mp]				; {9}   get SRC pointer
+	ld		r_src, [r_srp]						; {8}   get SRC value
+	clrvt										; {2}	clear overflow trap
+	mul		r_aval, r_src, <r_mlt	 			; {16}  r_aval = r_src * r_mlt
+	shll	r_aval, #2							; {10}  scale result
+
+	ld		r_dsp, mod_dsp[r_mp]				; {9}   get DST pointer
+	ldbze	r_temp, mod_flg[r_mp]				; {10}  get mp->flg
+	jbs		r_temp, DB_TIME, dt_is_t			; {5/9} jump if we're modulating time
+
+	jbs		r_temp, DB_RATE, dt_is_r			; {5/9} jump if we're modulating rate
+
+	add		r_avalh, [r_dsp]					; {9}   add destination
+	jvt		dm_ovf								; {4/8} jump if over/under-flow
+
+dm_upd:
+
+	jbs		r_avalh+1, 7, dm_neg				; {5/9} jump if result is negative
+
+	st		r_avalh, [r_dsp]					; {8}   vp->outval[DST] = r_avalh
+
+dm_upd1:
+
+	ld		r_dac, mod_dac[r_mp]				; {9}   get cvtable pointer
+	shr		r_avalh, #3							; {9}   r_avalh >>= 3
+	st		r_avalh, [r_dac]					; {8}   cvtable[DST] = mval
+
+dm_next:
+
+	add		r_mp, #mod_size						; {5}   point at the next MOD
+	djnz	r_nm, dm_mod_loop					; {5/9} loop until mods are done
+
+	sjmp	dm_env								; {7}	go apply ENV4 to LEVEL
+
+; ----------------------------------------------------------------------------
+; exception handling for the main modulation loop
+; ----------------------------------------------------------------------------
+
+dt_is_t:	; --- process time modulation ------------------------------------
+
+	neg		r_avalh								; {3}   negate so + value increases time
+
+dt_is_r:	; --- process rate modulation ------------------------------------
+
+	clr		r_temp								; {3}   clear r_temp
+	ldb		r_temp, <r_avalh+1					; {4}   get high byte of modulation value
+	subb	r_temp, #80H						; {4}   convert to offset binary
+	add		r_temp, <r_temp						; {4}   make it a WORD index
+	ld		r_temp, tmtable[r_temp]				; {10}  get the multiplier
+	mul		r_aval, r_temp, [r_dsp]				; {23}  multiply the destination
+	div		r_aval, #1000						; {33}  scale result
+	ld		r_avalh, <r_aval					; {4}   put result where we want it
+	sjmp	dm_upd								; {7}   go update curval/outval
+
+dm_ovf:		; --- process over/under-flow ------------------------------------
+
+	jlt		dm_unf								; {5/9} jump if it was an underflow
+
+	ld		r_avalh, #07FFFH					; {5}   limit result to 0x7FFF
+	sjmp	dm_upd								; {7}	go update value
+
+dm_unf:
+
+	ld		r_avalh, #08001H					; {5}   limit result to 0x8001
+	sjmp	dm_upd								; {7}	go update value
+
+dm_neg:		; --- process negative results -----------------------------------
+
+	st		r_avalh, [r_dsp]					; {8}   vp->outval[DST] = r_avalh
+	clr		r_avalh								; {3}	clear r_avalh for output
+	sjmp	dm_upd1								; {7}	go do output 0 to DAC
+
+; ----------------------------------------------------------------------------
+; Apply ENV4 modulation and MIDI levels to LEVEL for VCA output.
+;
+; This calculates: VCA = (LEVEL + ENV4) - (LEVEL * ENV4)
+;						 - 0x3F80 + P_LEVEL
+;						 - 0x3F80 + M_LEVEL
+;
+; Note:  in this section of code,
+;
+;	r_src		contains the LEVEL value
+;	r_mlt		contains the ENV4 value
+;	r_aval		contains the product
+;	r_avalh		contains the modulated result
+; ----------------------------------------------------------------------------
+
+dm_env:
+
+	ld		r_src, (2*VT_MIX_LEVEL)[r_ovp]		; {10}  get LEVEL value
+	ld		r_mlt, (2*VT_PP_ENV4)[r_ovp]		; {10}  get ENV4 value
+
+	clrvt										; {2}	clear overflow trap
+	mul		r_aval, r_src, <r_mlt		 		; {23}  r_aval = LEVEL * ENV4
+	shll	r_aval, #1							; {8}   scale result in r_avalh
+	neg		r_avalh								; {3}   negate r_avalh
+	add		r_avalh, <r_src						; {4}   add LEVEL
+	add		r_avalh, <r_mlt						; {4}   add ENV4
+	jnvt	dm_env1								; {5/9} jump if no overflow
+
+	ld		r_avalh, #07FFFH					; {5}   limit result to 0x7FFF
+
+dm_env1:
+
+	sub		r_avalh, #03F80H					; {5}   subtract offset
+	add		r_avalh, voice_p_level[r_vp]		; {9}   add PART LEVEL
+
+	sub		r_avalh, #03F80H					; {5}   subtract offset
+	add		r_avalh, voice_m_level[r_vp]		; {9}   add MIDI LEVEL
+
+	jbc		r_avalh+1, 7, dm_vca1				; {5/9} don't output negative values
+
+	clr		r_avalh								; {3}   output zero instead
+
+dm_vca1:
+
+	shr		r_avalh, #3							; {9}   r_avalh >>= 3
+
+	cmp		r_vp, #v							; {5}   which voice is this ?
+	jne		dm_vcab								; {4/8} jump if it's voice B
+
+	st		r_avalh, cvtable+DAC_A_VCA			; {10}  update voice A VCA
+	sjmp	dm_done								; {7}   ...
+
+dm_vcab:
+
+	st		r_avalh, cvtable+DAC_B_VCA			; {10}  update voice B VCA
+
+; ----------------------------------------------------------------------------
+; Update the DAC for the VCO Pitches and VCF Frequencies,
+; which might not be modulated, but have to be corrected for tuning.
+;
+; Note:  in this section of code,
+;
+;	r_srp		constant of 0x0FFF
+;	r_temp		scratch
+; ----------------------------------------------------------------------------
+
+dm_done:
+
+	ld		r_srp, #0FFFH						; {5}   setup constant of 0x0FFF
+
+	cmp		r_vp, #v							; {5}   which voice is this ?
+	je		dm_outa								; {4/8} jump if it's voice A
+
+	sjmp	dm_outb								; {7}   go process voice B
+
+; ----------------------------------------------------------------------------
+; Voice A -- VCO1
+; ----------------------------------------------------------------------------
+
+dm_outa:
+
+	ld		r_temp, (2*VT_VCO1_CNOTE)[r_ovp]	; {10}  get vp->outval[VT_VCO1_CNOTE]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset				; {9}   apply tuning offsets
+	add		r_temp, a_v1_off					; {9}   apply auto-tuning
+	jge		dm_outa1							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outa1a							; {7}   ...
+
+dm_outa1:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outa1a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outa1a:
+
+	st		r_temp, cvtable+DAC_A_VCO1			; {10}  update the DAC table
+
+; ----------------------------------------------------------------------------
+; Voice A -- VCO2
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_VCO2_CNOTE)[r_ovp]	; {10}  get vp->outval[VT_VCO2_CNOTE]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset				; {9}   apply tuning offsets
+	add		r_temp, a_v2_off					; {9}   apply auto-tuning
+	jge		dm_outa2							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outa2a							; {7}   ...
+
+dm_outa2:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outa2a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outa2a:
+
+	st		r_temp, cvtable+DAC_A_VCO2			; {10}  update the DAC table
+
+; ----------------------------------------------------------------------------
+; Voice A -- MM VCF
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_MM_FREQ)[r_ovp]		; {10}  get vp->outval[VT_MM_FREQ]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset				; {9}   apply tuning offsets
+	add		r_temp, a_mm_off					; {9}   apply tuning offset
+	jge		dm_outa3							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outa3a							; {7}   ...
+
+dm_outa3:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outa3a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outa3a:
+
+	st		r_temp, cvtable+DAC_A_MM			; {10}  update the DAC table
+
+; ----------------------------------------------------------------------------
+; Voice A -- OB VCF
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_OB_FREQ)[r_ovp]		; {10}  get vp->outval[VT_OB_FREQ]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset				; {9}   apply tuning offsets
+	add		r_temp, a_ob_off					; {9}   apply tuning offset
+	jge		dm_outa4							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outa4a							; {7}   ...
+
+dm_outa4:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outa4a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outa4a:
+
+	st		r_temp, cvtable+DAC_A_OB			; {10}  update the DAC table
+
+	ret											; {14}  MODs DONE -- we're out'a here
+
+; ----------------------------------------------------------------------------
+; Voice B -- VCO1
+; ----------------------------------------------------------------------------
+
+dm_outb:
+
+	ld		r_temp, (2*VT_VCO1_CNOTE)[r_ovp]	; {10}  get vp->outval[VT_VCO1_CNOTE]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset+voice_size	; {9}   apply tuning offsets
+	add		r_temp, b_v1_off					; {9}   apply auto-tuning
+	jge		dm_outb1							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outb1a							; {7}   ...
+
+dm_outb1:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outb1a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outb1a:
+
+	st		r_temp, cvtable+DAC_B_VCO1			; {10}  update the DAC table
+
+; ----------------------------------------------------------------------------
+; Voice B -- VCO2
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_VCO2_CNOTE)[r_ovp]	; {10}  get vp->outval[VT_VCO2_CNOTE]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset+voice_size	; {9}   apply tuning offsets
+	add		r_temp, b_v2_off					; {9}   apply auto-tuning
+	jge		dm_outb2							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outb2a							; {7}   ...
+
+dm_outb2:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outb2a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outb2a:
+
+	st		r_temp, cvtable+DAC_B_VCO2			; {10}  update the DAC table
+
+; ----------------------------------------------------------------------------
+; Voice B -- MM VCF
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_MM_FREQ)[r_ovp]		; {10}  get vp->outval[VT_MM_FREQ]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset+voice_size	; {9}   apply tuning offsets
+	add		r_temp, b_mm_off					; {9}   apply tuning offset
+	jge		dm_outb3							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outb3a							; {7}   ...
+
+dm_outb3:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outb3a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outb3a:
+
+	st		r_temp, cvtable+DAC_B_MM			; {10}  update the DAC table
+
+; ----------------------------------------------------------------------------
+; Voice B -- OB VCF
+; ----------------------------------------------------------------------------
+
+	ld		r_temp, (2*VT_OB_FREQ)[r_ovp]		; {10}  get vp->outval[VT_OB_FREQ]
+	shra	r_temp, #3							; {9}   scale for DAC output
+	add		r_temp, v+voice_offset+voice_size	; {9}   apply tuning offsets
+	add		r_temp, b_ob_off					; {9}   apply tuning offset
+	jge		dm_outb4							; {4/8} jump if GE 0
+
+	clr		r_temp								; {3}   make negatives zero
+	sjmp	dm_outb4a							; {7}   ...
+
+dm_outb4:
+
+	cmp		r_temp, <r_srp						; {4}   see if we're in range
+	jle		dm_outb4a							; {4/8} jump if so
+
+	ld		r_temp, <r_srp						; {4}   limit to 0x0FFF
+
+dm_outb4a:
+
+	st		r_temp, cvtable+DAC_B_OB			; {10}  update the DAC table
+
+	ret											; {14}  MODs DONE -- we're out'a here
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	do_mods() -- do the modulations
+;+;
+;+;	Prototype:
+;+;
+;+;		void do_mods();
+;+;
+;+;	Calls:
+;+;
+;+;		exec_mods
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+	public	do_mods				; void do_mods()
+
+do_mods:
+
+	ld		r_vp, #v							; {5}   do voice A MODs
+	lcall	exec_mods							; {13}  ...
+
+	ld		r_vp, #v+voice_size					; {5}   do voice B MODs
+	ljmp	exec_mods							; {7}   ... let exec_mods() return
+
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;+;	mod_vca() -- adjust VCA for LEVEL, ENV4 and MIDI levels
+;+;
+;+;	Prototype:
+;+;
+;+;		WORD mod_vca(vp, level);
+;+;		struct voice *vp;		VOICE pointer
+;+;		WORD level;				master VCA level
+;+;
+;+;	This calculates: VCA = (LEVEL + ENV4) - (LEVEL * ENV4)
+;+;						   - 0x3F80 + P_LEVEL
+;+;						   - 0x3F80 + M_LEVEL
+;+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; ----------------------------------------------------------------------------
+; Stack on entry:
+;
+; 	   ษอออออออออออออป
+;    4 บ level   arg บ
+; 	   ฬอออออออออออออน
+;    2 บ vp      arg บ
+; 	   ฬอออออออออออออน
+; 	 0 บ RETURN      บ
+; 	   ศอออออออออออออผ
+; ----------------------------------------------------------------------------
+
+	public	mod_vca				; WORD mod_vca(vp, level)
+
+mod_vca:
+
+	push	rm_val								; {8}   save registers
+	push	rm_valh								; {8}   ...
+	push	rm_vpr								; {8}   ...
+	push	rm_mvl								; {8}   ...
+
+; ----------------------------------------------------------------------------
+; Stack at this point:
+;
+; 	   ษอออออออออออออป
+;   12 บ level   arg บ
+; 	   ฬอออออออออออออน
+;   10 บ vp      arg บ
+; 	   ฬอออออออออออออน
+; 	 8 บ RETURN      บ
+; 	   ฬอออออออออออออน
+; 	 6 บ rm_val  old บ
+; 	   ฬอออออออออออออน
+; 	 4 บ rm_valh old บ
+; 	   ฬอออออออออออออน
+; 	 2 บ rm_vpr  old บ
+; 	   ฬอออออออออออออน
+; 	 0 บ rm_mvl  old บ
+; 	   ศอออออออออออออผ
+; ----------------------------------------------------------------------------
+
+	ld		rm_vpr, 10[sp]						; {10}  get vp from stack
+	ld		rm_mvl, 12[sp]						; {10}  get LEVEL from stack
+
+	clrvt										; {2}	clear overflow trap
+	mul		rm_val, rm_mvl, voice_curval+(2*VT_PP_ENV4)[rm_vpr]	; {23}  rm_val = ENV4 * LEVEL
+	shll	rm_val, #1							; {8}   scale result in rm_valh
+	neg		rm_valh								; {3}   negate rm_valh
+	add		rm_valh, <rm_mvl					; {4}   add LEVEL
+	add		rm_valh, voice_curval+(2*VT_PP_ENV4)[rm_vpr]	; {9}   add ENV4
+	jnvt	m_vca0								; {5/9} jump if no overflow
+
+	ld		rm_valh, #07FFFH					; {5}   limit result to 0x7FFF
+
+m_vca0:
+
+	sub		rm_valh, #03F80H					; {5}   subtract offset
+	add		rm_valh, voice_p_level[rm_vpr]		; {9}   add PART LEVEL
+
+	sub		rm_valh, #03F80H					; {5}   subtract offset
+	add		r0, rm_valh, voice_m_level[rm_vpr]	; {9}   add MIDI LEVEL, result in r0
+
+	jbc		r0+1, 7, m_vca1						; {5/9} jump if it's positive
+
+	clr		r0									; {3}   limit underflow to 0x0000
+
+m_vca1:
+
+	pop		rm_mvl								; {11}  restore registers
+	pop		rm_vpr								; {11}  ...
+	pop		rm_valh								; {11}  ...
+	pop		rm_val								; {11}  ...
+
+	ret											; {14}  DONE -- return
+
+; The End --------------------------------------------------------------------
+
+	end
