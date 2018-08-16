@@ -1,0 +1,49 @@
+XICOR X9241 QuadPot I/O Protocol
+--------------------------------
+
+This is similar to the I2C bus protocol from Phillips/Signetics,
+but with a different addressing scheme.
+
+Two bi-directional lines are used:
+
+	SCL		Serial Clock  (only controlled by the master in this application)
+	SDA		Serial Data
+
+Initially, both SCL and SDA are HIGH in the IDLE state.
+
+To CLEAR a possible acknowledge response:
+
+	SCL is driven LOW by the master
+	SCL is floated HIGH by the master
+	SDA is floated HIGH by the master
+
+The START state is entered when SDA is taken LOW by the master.
+
+To TRANSMIT a bit:
+
+	SCL is driven LOW by the master
+	SDA is changed to the desired state by the master
+	SCL is floated HIGH by the master
+	SDA is sampled by the slave
+
+To RECEIEVE a bit:
+
+	SCL is driven LOW by the master
+	SDA is changed to the desired state by the slave
+	SCL is floated HIGH by the master
+	SDA is sampled by the master
+
+When 8 bits have been transferred an ACKNOWLEDGE cycle occurs:
+
+	SCL is driven LOW by the master
+	SDA is floated HIGH by the master
+	SDA is driven LOW by the slave
+	SCL is floated HIGH by the master
+	SDA is sampled by the master and should be LOW
+
+When all bytes are transmitted and acknowledged the STOP state is entered:
+
+	SCL is driven LOW by the master
+	SDA is driven LOW by the master
+	SCL is floated HIGH by the master
+	SDA is floated HIGH by the master

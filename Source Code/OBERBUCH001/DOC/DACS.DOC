@@ -1,0 +1,123 @@
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ   OB-MX Voice Card DAC Addressing And Control Voltage Numbers  บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ                                                                บ
+บ    DAC Value Base Address    FD00                              บ
+บ    DAC Update Address        FE00                              บ
+บ    S/H Update Address        FE80                              บ
+บ                                                                บ
+บ   ฺฤยฤยฤยฤยฤยฤยฤยฤยฤยฤยฤยฤยฤยฤยฤยฤฟ                            บ
+บ   ณ1ณ1ณ1ณ1ณ1ณ1ณ0ณ1ณ0ณCณCณCณCณVณDณBณ                            บ
+บ   ภฤมฤมฤมฤมฤมฤมฤมฤมฤมฤมฤมฤมฤมฤมฤมฤู                            บ
+บ                      ฤยฤ ฤยฤ ย ย ย                             บ
+บ                       ณ   ณ  ณ ณ ภ Byte    (0 = LS, 1 = MS)    บ
+บ                       ณ   ณ  ณ ภฤฤ DAC     (0 = A, 1 = B)      บ
+บ                       ณ   ณ  ภฤฤฤฤ Voice   (0 = A, 1 = B)      บ
+บ                       ณ   ภฤฤฤฤฤฤฤ Slot                        บ
+บ                       ภฤฤฤฤฤฤฤฤฤฤฤ S/H                         บ
+บ                                                                บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+    ษออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+    บ                        DAC A (0)                     บ
+    วฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤถ
+    บSlot ณ  S/H 00   ณ  S/H 01   ณ   S/H 10      ณ S/H 11 บ
+    วฤฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤฤฤฤฤถ
+    บ 00  ณ MM_IN1    ณ VCO1_PW   ณ VCO1_PITCH    ณ VCA    บ
+    บ 01  ณ MM_IN2    ณ VCO2_PW   ณ VCO2_PITCH    ณ PAN    บ
+    บ 10  ณ MM_NOISE  ณ VCO1_FM   ณ MM_FREQ       ณ SPARE1 บ
+    บ 11  ณ MM_RESON  ณ VCO2_FM   ณ OB_FREQ       ณ SPARE2 บ
+    ฬอออออฯอออออออออออฯอออออออออออฯอออออออออออออออฯออออออออน
+    บ                        DAC B (1)                     บ
+    วฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤฤฤฤฤฤฤฤยฤฤฤฤฤฤฤฤถ
+    บ 00  ณ OB_IN1    ณ MIX_MM    ณ VCO1_FINE     ณ -NC-   บ
+    บ 01  ณ OB_IN2    ณ MIX_LP    ณ VCO2_FINE     ณ -NC-   บ
+    บ 10  ณ OB_NOISE  ณ MIX_BP    ณ MM_FINE       ณ -NC-   บ
+    บ 11  ณ OB_RESON  ณ MIX_HP    ณ OB_FINE       ณ -NC-   บ
+    ศอออออฯอออออออออออฯอออออออออออฯอออออออออออออออฯออออออออผ
+
+             ษออออัออออออออออออัออออัอออออออออออป
+             บ CV ณ Function   ณ CV ณ Function  บ
+             วฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤถ
+             บ  0 ณ MM_IN1     ณ  1 ณ OB_IN1    บ
+             บ  2 ณ MM_IN2     ณ  3 ณ OB_IN2    บ
+             บ  4 ณ MM_NOISE   ณ  5 ณ OB_NOISE  บ
+             บ  6 ณ MM_RESON   ณ  7 ณ OB_RESON  บ
+             วฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤถ
+             บ  8 ณ VCO1_PW    ณ  9 ณ MIX_MM    บ
+             บ 10 ณ VCO2_PW    ณ 11 ณ MIX_LP    บ
+             บ 12 ณ VCO1_FM    ณ 13 ณ MIX_BP    บ
+             บ 14 ณ VCO2_FM    ณ 15 ณ MIX_HP    บ
+             วฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤถ
+             บ 16 ณ VCO1_PITCH ณ 17 ณ VCO1_FINE บ
+             บ 18 ณ VCO2_PITCH ณ 19 ณ VCO2_FINE บ
+             บ 20 ณ MM_FREQ    ณ 21 ณ MM_FINE   บ
+             บ 22 ณ OB_FREQ    ณ 23 ณ OB_FINE   บ
+             วฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤฤลฤฤฤฤลฤฤฤฤฤฤฤฤฤฤฤถ
+             บ 24 ณ VCA        ณ 25 ณ SPARE1    บ
+             บ 26 ณ PAN        ณ 27 ณ SPARE2    บ
+             บ 28 ณ -NC-       ณ 29 ณ -NC-      บ
+             บ 30 ณ -NC-       ณ 31 ณ -NC-      บ
+             ศออออฯออออออออออออฯออออฯอออออออออออผ
+
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Notes:                                                         บ
+บ                                                                บ
+บ  1. SPARE1 and SPARE 2 have no R/C networks on the S/H outputs บ
+บ  2. DAC B has no 4th S/H                                       บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บ Revision 5 -- 1993-12-03 -- D.N. Lynx Crowe                    บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+ษออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออป
+บOB-MX Control Voltage numbers in DAC Scan Order                 บ
+ศออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออออผ
+
+CV SH SL V D	Function			CV SH SL V D	Function
+ฤฤ ฤฤ ฤฤ ฤ ฤ	ฤฤฤฤฤฤฤฤ			ฤฤ ฤฤ ฤฤ ฤ ฤ	ฤฤฤฤฤฤฤฤ
+ 0 00 00 0 0	A MM_IN1			32 10 00 0 0	A VCO1_PITCH
+ 1 00 00 0 1	A OB_IN1			33 10 00 0 1	A VCO1_SCALE
+ 2 00 00 1 0	B MM_IN1			34 10 00 1 0	B VCO1_PITCH
+ 3 00 00 1 1	B OB_IN1			35 10 00 1 1	B VCO1_SCALE
+
+ 4 00 01 0 0	A MM_IN2			36 10 01 0 0	A VCO2_PITCH
+ 5 00 01 0 1	A OB_IN2			37 10 01 0 1	A VCO2_SCALE
+ 6 00 01 1 0	B MM_IN2			38 10 01 1 0	B VCO2_PITCH
+ 7 00 01 1 1	B OB_IN2			39 10 01 1 1	B VCO2_SCALE
+
+ 8 00 10 0 0	A MM_NOISE			40 10 10 0 0	A MM_FREQ
+ 9 00 10 0 1	A OB_NOISE			41 10 10 0 1	A MM_SCALE
+10 00 10 1 0	B MM_NOISE			42 10 10 1 0	B MM_FREQ
+11 00 10 1 1	B OB_NOISE			43 10 10 1 1	B MM_SCALE
+
+12 00 11 0 0	A MM_RESON			44 10 11 0 0	A OB_FREQ
+13 00 11 0 1	A OB_RESON			45 10 11 0 1	A OB_SCALE
+14 00 11 1 0	B MM_RESON			46 10 11 1 0 	B OB_FREQ
+15 00 11 1 1	B OB_RESON			47 10 11 1 1 	B OB_SCALE
+
+16 01 00 0 0	A VCO1_PW			48 11 00 0 0	A VCA
+17 01 00 0 1	A MIX_MM			49 11 00 0 1	A -NC-
+18 01 00 1 0	B VCO1_PW			50 11 00 1 0 	B VCA
+19 01 00 1 1	B MIX_MM			51 11 00 0 1 	B -NC-
+
+20 01 01 0 0	A VCO2_PW			52 11 01 0 0	A PAN
+21 01 01 0 1	A MIX_LP			53 11 01 0 1	A -NC-
+22 01 01 1 0	B VCO2_PW			54 11 01 1 0 	B PAN
+23 01 01 1 1	B MIX_LP			55 11 01 1 1 	B -NC-
+
+24 01 10 0 0	A VCO1_FM			56 11 10 0 0	A SPARE1
+25 01 10 0 1	A MIX_BP			57 11 10 0 1	A -NC-
+26 01 10 1 0	B VCO1_FM			58 11 10 1 0 	B SPARE1
+27 01 10 1 1	B MIX_BP			59 11 10 1 1 	B -NC-
+
+28 01 11 0 0	A VCO2_FM			60 11 11 0 0	A -NC-
+29 01 11 0 1	A MIX_HP			61 11 11 0 1	A -NC-
+30 01 11 1 0	B VCO2_FM			62 11 11 1 0 	B -NC-
+31 01 11 1 1	B MIX_HP			63 11 11 1 1 	B -NC-
+
+Note:  DAC address 63 0x3F is used as the NULL ("Bit Bucket")
+target for destinations without an associated control voltage.

@@ -1,0 +1,93 @@
+-!
+	File:		VOICEX.XCL
+
+	Purpose:	XLINK command file for the OB-MX Voice Card
+				Intel-standard hex output to VOICE.OUT
+
+	Revison:	21	1994-05-17	D.N. Lynx Crowe
+-!
+
+-! define CPU  -!
+-c8096
+
+-!
+	OB-MX Voice Card Memory Map:
+
+	PROM			0000..7FFF
+		(Processor)	0000..00FF	(Internal RAM registers)
+		(Code)		0100..1FFD
+		(Processor)	1FFE..1FFF
+		(Vectors)	2000..207F
+		(Code)		2080..7FFF
+	RAM				8000..FCFF
+		(Data)		8000..EFFF
+		(Stack)		F000..F7FF
+		(Debug)		F800..FCFF
+	Voice A CVs		FD00..FD3F	(12 bit DACs)
+	Voice B CVs		FD40..FD7F	(12 bit DACs)
+	DAC Update		FE00		(W/O, no data, latches last CVs address)
+	S/H Update		FE80		(W/O, no data, uses latched CV address)
+	Voice A ctl reg	FF00		(8 bit OSC control register)
+	Voice B ctl reg	FF80		(8 bit OSC control register)
+-!
+
+-!  First allocate the PROM segments -!
+-!	2080 is the start of PROM -!
+
+-Z(CODE)ZVECT,CSTR,CONST,CDATA,CCSTR,RCODE,hcode=100-1FFD
+-Z(CODE)CSTART,acode,CODE=2080-7FFF
+
+-!  Then allocate the writeable segments to RAM -!
+-!	8000 is the start of RAM -!
+
+-Z(DATA)DATA,IDATA,UDATA,ECSTR,WCSTR,TEMP,adata=8000-EFFF
+-Z(DATA)CSTACK=F000-F7FF
+-Z(DATA)cregs=1A-23
+-Z(DATA)aregs=24-E9
+-Z(DATA)ctemp=EA-FF
+
+-! See configuration section concerning printf/sprintf -!
+-e_small_write=_formatted_write
+
+-! See configuration section concerning scanf/sscanf -!
+-e_medium_read=_formatted_read
+
+-! specify output file -!
+-o voice.out
+
+-! specify list file -!
+-l voice.lst
+
+-! generate cross reference list -!
+-x
+
+-! no global typecheck -!
+-G
+
+-! specify output format -!
+-Fintel-standard
+
+-! load the 'C' library -!
+d:\arch96\lib\cl8096
+
+-! load the rest of the modules -!
+obj\tables1.r15
+obj\tables2.r15
+obj\tables3.r15
+obj\vars.r15
+obj\qpots.r15
+obj\hdw.r15
+obj\ipca.r15
+obj\calc.r15
+obj\dosrc.r15
+obj\domods.r15
+obj\voicea.r15
+obj\gate.r15
+obj\env.r15
+obj\mods.r15
+obj\ipc1.r15
+obj\ipc2.r15
+obj\lfo.r15
+obj\touchup.r15
+obj\tune.r15
+obj\main.r15

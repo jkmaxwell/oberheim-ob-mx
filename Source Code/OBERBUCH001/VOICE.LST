@@ -1,0 +1,1885 @@
+################################################################################
+#                                                                              #
+#        Archimedes Universal Linker V4.30/DXT         14/Jun/94  16:52:07     #
+#                                                                              #
+#           Target CPU    =  8096                                              #
+#           List file     =  voice.lst                                         #
+#           Output file 1 =  voice.out                                         #
+#           Output format =  intel-standard                                    #
+#           Command line  =  -f voicex (-c8096                                 #
+#                            -Z(CODE)ZVECT,CSTR,CONST,CDATA,CCSTR,RCODE,       #
+#                            hcode=100-1FFD                                    #
+#                            -Z(CODE)CSTART,acode,CODE=2080-7FFF               #
+#                            -Z(DATA)DATA,IDATA,UDATA,ECSTR,WCSTR,TEMP,        #
+#                            adata=8000-EFFF                                   #
+#                            -Z(DATA)CSTACK=F000-F7FF -Z(DATA)cregs=1A-23      #
+#                            -Z(DATA)aregs=24-E9 -Z(DATA)ctemp=EA-FF           #
+#                            -e_small_write=_formatted_write                   #
+#                            -e_medium_read=_formatted_read -o voice.out -l    #
+#                            voice.lst -x -G -Fintel-standard                  #
+#                            d:\arch96\lib\cl8096 obj\tables1.r15              #
+#                            obj\tables2.r15 obj\tables3.r15 obj\vars.r15      #
+#                            obj\qpots.r15 obj\hdw.r15 obj\ipca.r15            #
+#                            obj\calc.r15 obj\dosrc.r15 obj\domods.r15         #
+#                            obj\voicea.r15 obj\gate.r15 obj\env.r15           #
+#                            obj\mods.r15 obj\ipc1.r15 obj\ipc2.r15            #
+#                            obj\lfo.r15 obj\touchup.r15 obj\tune.r15          #
+#                            obj\main.r15)                                     #
+#                                                                              #
+#                                               (c) Copyright Archimedes 1991  #
+################################################################################
+
+
+
+
+
+                ****************************************
+                *                                      *
+                *           CROSS REFERENCE            *
+                *                                      *
+                ****************************************
+
+       Program entry at : 2080  Relocatable, from module : CSTARTUP
+
+
+
+                ****************************************
+                *                                      *
+                *             MODULE MAP               *
+                *                                      *
+                ****************************************
+
+  FILE NAME : d:\arch96\lib\cl8096.r15
+  PROGRAM MODULE, NAME : CSTARTUP
+
+  SEGMENTS IN THE MODULE
+  ======================
+CSTACK
+  Relative segment, address : F000 - F7FF
+    -------------------------------------------------------------------------
+CSTART
+  Relative segment, address : 2080 - 208C
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : exit
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : 53CC - 53CD
+           ENTRIES                ADDRESS          REF BY MODULE
+           exit                    53CC            Not referred to
+           ?C_EXIT                 53CC            CSTARTUP
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : ?SEG_INIT_L00
+
+  SEGMENTS IN THE MODULE
+  ======================
+UDATA
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+IDATA
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+ECSTR
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+TEMP
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+DATA
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+WCSTR
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CDATA
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+ZVECT
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CCSTR
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CONST
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CSTR
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+RCODE
+  Relative segment, address : 150A - 1566
+           ENTRIES                ADDRESS          REF BY MODULE
+           ?SEG_INIT_L00           150A            CSTARTUP
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : ?LIB_VERSION_L00
+          ABSOLUTE ENTRIES        ADDRESS          REF BY MODULE
+           ==============         =======          =============
+           ?CL8096_3_00_L00        0000            tables1
+                                                   tables2
+                                                   tables3
+                                                   vars
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : ?LONG_MUL_L02
+
+  SEGMENTS IN THE MODULE
+  ======================
+RCODE
+  Relative segment, address : 1568 - 1590
+           ENTRIES                ADDRESS          REF BY MODULE
+           ?SL_MUL_L02             1568            ipc2
+           ?UL_MUL_L02             1568            Not referred to
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : ?SL_DIV_L02
+
+  SEGMENTS IN THE MODULE
+  ======================
+RCODE
+  Relative segment, address : 1592 - 15B8
+           ENTRIES                ADDRESS          REF BY MODULE
+           ?SL_DIV_L02             1592            ipc1
+           ?SL_DIV_SWAP_L02        159C            ipc2
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : ?UL_DIV_L02
+
+  SEGMENTS IN THE MODULE
+  ======================
+RCODE
+  Relative segment, address : 15BA - 162B
+           ENTRIES                ADDRESS          REF BY MODULE
+           ?UL_DIV_L02             15BA            ?SL_DIV_L02
+           ?UL_DIV_SWAP_L02        15C6            ?SL_DIV_L02
+
+    -------------------------------------------------------------------------
+  LIBRARY MODULE, NAME : ?RES_SIGN_L02
+
+  SEGMENTS IN THE MODULE
+  ======================
+RCODE
+  Relative segment, address : 162C - 1649
+           ENTRIES                ADDRESS          REF BY MODULE
+           ?RES_SIGN_L02           162C            ?SL_DIV_L02
+
+    -------------------------------------------------------------------------
+    *************************************************************************
+
+  FILE NAME : obj\tables1.r15
+  PROGRAM MODULE, NAME : tables1
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CONST
+  Relative segment, address : 0100 - 048B
+           ENTRIES                ADDRESS          REF BY MODULE
+           dacmap                  0102            hdw
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           dst_cvn                 0202            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           dst_typ                 0244            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           dst_val                 0286            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           fixed_mods              0142            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           par_dst                 02C8            calc
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           par_val                 0325            calc
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           pw_scl                  03F4            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           qpa_cmd                 0392            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           qpa_pot                 0382            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           qpb_cmd                 039A            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           qpb_pot                 038A            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           tuneup                  0100            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vco_off                 03A2            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vin_tab                 040C            gate
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+
+    *************************************************************************
+
+  FILE NAME : obj\tables2.r15
+  PROGRAM MODULE, NAME : tables2
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CONST
+  Relative segment, address : 048C - 0E8B
+           ENTRIES                ADDRESS          REF BY MODULE
+           kbtable                 0B8C            env
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           l_incrs                 080C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           l_ticks                 078C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           lfosh                   0A8C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           p_incrs                 050C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           p_ticks                 048C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           r_incrs                 098C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           r_ticks                 090C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           t_incrs                 068C            env
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           t_ticks                 060C            env
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           tmtable                 0C8C            domods
+
+    *************************************************************************
+
+  FILE NAME : obj\tables3.r15
+  PROGRAM MODULE, NAME : tables3
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+CONST
+  Relative segment, address : 0E8C - 1493
+           ENTRIES                ADDRESS          REF BY MODULE
+           fml_tab                 138C            gate
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           mlt_tab                 0E8C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           off_val                 118C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           pml_tab                 108C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           smooth                  1394            mods
+                                                   ipc1
+                                                   ipc2
+                                                   lfo
+                                                   main
+           tml_tab                 0F8C            gate
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           val_tab                 128C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+
+    *************************************************************************
+
+  FILE NAME : obj\vars.r15
+  PROGRAM MODULE, NAME : vars
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : 53CE - 53DD
+           ENTRIES                ADDRESS          REF BY MODULE
+           varz                    53CE            main
+    -------------------------------------------------------------------------
+UDATA
+  Relative segment, address : 8076 - 95D5
+           ENTRIES                ADDRESS          REF BY MODULE
+           aoff                    8094            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           boff                    8096            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ctltable                819A            mods
+                                                   ipc1
+                                                   ipc2
+                                                   tune
+                                                   main
+           cur_ctl                 808A            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           cur_cv                  8088            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           cvtable                 811A            hdw
+                                                   domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   tune
+                                                   main
+           first_var               8076            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ipc_addr                8086            ipca
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ipc_fifo                8DD6            hdw
+                                                   voicea
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ipc_stat                8084            ipca
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ipc_state               8098            ipca
+                                                   voicea
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           parmap                  809A            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           tpa                     8090            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           tpb                     8092            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           v                       81AA            hdw
+                                                   calc
+                                                   domods
+                                                   gate
+                                                   env
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   lfo
+                                                   tune
+                                                   main
+           vchan1                  807C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vchan2                  807E            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vid1                    8078            hdw
+                                                   ipca
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vid2                    807A            ipca
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vpart1                  8080            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           vpart2                  8082            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           wca                     808C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           wcb                     808E            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+
+    *************************************************************************
+
+  FILE NAME : obj\qpots.r15
+  PROGRAM MODULE, NAME : qpots
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           T_HSO                   0002 
+           BIT6N                   FFFFFFBF 
+           QP_JAM                  0080 
+           QP_TIME                 0006 
+           wq2_pot                 0006 
+           wq2_cmd                 0008 
+           wq3_pot                 0006 
+           wq3_cmd                 0008 
+           wq3_val                 000A 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+acode
+  Relative segment, address : 208E - 28E0
+           ENTRIES                ADDRESS          REF BY MODULE
+           wqpot2                  208E            Not referred to
+           wqpot3                  2405            ipc1
+           setpots                 2870            ipc1
+           LOCALS                 ADDRESS
+           w2_out_adr              2171 
+           w2_oa_0                 2196 
+           w2_oa_wait              219C 
+           w2_ack_ok1              2242 
+           w2_out_cmd              225D 
+           w2_oc_0                 2282 
+           w2_oc_wait              2288 
+           w2_ack_ok2              232E 
+           w2_abort                2342 
+           w3_out_adr              24EC 
+           w3_oa_0                 2511 
+           w3_oa_wait              2517 
+           w3_ack_ok1              25BD 
+           w3_out_cmd              25D8 
+           w3_oc_0                 25FD 
+           w3_oc_wait              2603 
+           w3_ack_ok2              26A9 
+           w3_out_dat              26C4 
+           w3_od_0                 26E9 
+           w3_od_wait              26EF 
+           w3_ack_ok3              2795 
+           w3_abort                27A9 
+           ?msw_0000               2887 
+           ?msw_0001               28A3 
+           ?msw_0002               28BF 
+           ?msw_0003               28DB 
+
+    *************************************************************************
+
+  FILE NAME : obj\hdw.r15
+  PROGRAM MODULE, NAME : hdw
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           DISINT                  0000 
+           CRASH                   0000 
+           TIMER_RATE              08E4 
+           BAUD_VAL1               0005 
+           BAUD_VAL2               0080 
+           RI_BIT                  0002 
+           TI_BIT                  0001 
+           IMASK1                  0002 
+           TIMER_BIT               0020 
+           HSIDAV_BIT              0004 
+           TOVF_BIT                0001 
+           IPC_SEL                 0020 
+           HSI_DSBL                00AA 
+           CCR_VALUE               00C8 
+           IOC0_VALUE              0000 
+           IOC1_VALUE              0020 
+           IOC2_VALUE              0040 
+           SPCON_VALUE             0009 
+           r_cur                   001A 
+           r_val                   001C 
+           r_valh                  001E 
+           r_vp                    0020 
+           r_op                    0022 
+
+          ABSOLUTE SEGMENT ADDRESSES
+          ==========================
+                2000 - 2013
+                2018 - 2019
+                2030 - 203F
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 0024 - 0053
+           ENTRIES                ADDRESS          REF BY MODULE
+           bflag                   0038            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           calref                  003A            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           diagmode                002E            qpots
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           hsi_isw                 0032            mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   tune
+                                                   main
+           if_start                0024            voicea
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           if_end                  0026            voicea
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           intune                  002C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   tune
+                                                   main
+           ioc0_img                003E            mods
+                                                   ipc1
+                                                   ipc2
+                                                   tune
+                                                   main
+           ioc1_img                003F            qpots
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   tune
+                                                   main
+           ioc2_img                0040            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ipc_byte1               0028            ipca
+                                                   gate
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           ipc_byte2               002A            ipca
+                                                   gate
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           port2_img               0041            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           r_crash                 0034            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           r_mstime                0036            qpots
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   tune
+                                                   main
+           sflag                   003C            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           stwat_flag              0030            mods
+                                                   ipc1
+                                                   ipc2
+                                                   tune
+                                                   main
+           LOCALS                 ADDRESS
+           r_wis                   0042 
+           ipcouthead              0044 
+           ipcouttail              0046 
+           r_inp                   0048 
+           x1                      004A 
+           x2                      004C 
+           x3                      004E 
+           x4                      0050 
+           hsocount                0052 
+    -------------------------------------------------------------------------
+cregs
+  Relative segment, address : 001A - 0023
+           LOCALS                 ADDRESS
+           c_regs                  001A 
+    -------------------------------------------------------------------------
+ctemp
+  Relative segment, address : 00EA - 00FF
+           LOCALS                 ADDRESS
+           c_tmps                  00EA 
+    -------------------------------------------------------------------------
+adata
+  Relative segment, address : 95D6 - 9655
+           ENTRIES                ADDRESS          REF BY MODULE
+           ipc_obuf                95D6            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           LOCALS                 ADDRESS
+           ipc_obuf_end            9656 
+    -------------------------------------------------------------------------
+acode
+  Relative segment, address : 28E2 - 2DB1
+           ENTRIES                ADDRESS          REF BY MODULE
+           background              28E2            main
+           init_adata              2927            vars
+           init_regs               2933            vars
+           clear_done              2949            Not referred to
+           init_hdw                294A            main
+           hdw_go                  2990            main
+           ipc_flush               2992            Not referred to
+           flush_hsi               29A6            tune
+           write_ipc               29C2            ipca
+                                                   ipc1
+           get_id                  29E8            main
+           write_cv                29FD            ipc1
+                                                   ipc2
+                                                   main
+           LOCALS                 ADDRESS
+           notune                  28F7 
+           skip_prt                2903 
+           skip_lfo                290C 
+           skip_mod                2918 
+           skip_env                2921 
+           clear_it                293D 
+           ir_done                 2947 
+           hsiflush                29B6 
+           wipc_queue              29D6 
+           wipc_done               29E7 
+           wcv_1                   2A1B 
+           wcv_2                   2A28 
+           do_port                 2A2F 
+           p_decr1a                2A85 
+           p_stuff1a               2A8B 
+           p_store1a               2A8F 
+           p_next1a                2A94 
+           p_decr2a                2AE0 
+           p_stuff2a               2AE6 
+           p_store2a               2AEA 
+           p_nextv                 2AEF 
+           p_decr1b                2B45 
+           p_stuff1b               2B4B 
+           p_store1b               2B4F 
+           p_next1b                2B54 
+           p_decr2b                2BA0 
+           p_stuff2b               2BA6 
+           p_store2b               2BAA 
+           p_exit                  2BAF 
+           start_timer             2BB0 
+           ipc_isr_in              2BC0 
+           ipc_isr_out             2BD7 
+           ipcout_empty            2BF2 
+           ipcout_done             2BFB 
+           timer_isr               2BFD 
+           no_cal_on               2C0F 
+           tunefix                 2C1E 
+           cvu_nohsi               2C24 
+           not_hsi                 2C2A 
+           no_time                 2C31 
+           cvu1                    2C3D 
+           wm_0000                 2C69 
+           wm_0001                 2C8A 
+           wm_0002                 2CAB 
+           wm_0003                 2CCC 
+           wm_0004                 2CED 
+           wm_0005                 2D0E 
+           wm_0006                 2D2F 
+           wm_0007                 2D50 
+           cvu2                    2D63 
+           no_cal_off              2DAB 
+           no_int_vec0             2DAD 
+           no_int_vec1             2DAD 
+           no_int_vec3             2DAD 
+           no_int_vec4             2DAD 
+           no_int_vec6             2DAD 
+           no_int_vec7             2DAD 
+           no_int_vec10            2DAD 
+           no_int_vec11            2DAD 
+           no_int_vec12            2DAD 
+           no_int_vec13            2DAD 
+           no_int_vec14            2DAD 
+           no_int_vec15            2DAD 
+           no_int_trap             2DAD 
+           no_int_badop            2DAD 
+           no_int_vect             2DAD 
+
+    *************************************************************************
+
+  FILE NAME : obj\ipca.r15
+  PROGRAM MODULE, NAME : ipca
+
+  SEGMENTS IN THE MODULE
+  ======================
+hcode
+  Relative segment, address : 164A - 17B7
+           ENTRIES                ADDRESS          REF BY MODULE
+           ipc_state_0             164A            voicea
+                                                   ipc1
+           ipc1_state_1            16C3            ipc1
+           ipc2_state_1            16DC            ipc1
+           ipcb_state_1            16F5            ipc1
+           ipc1_state_2            170E            Not referred to
+           ipc2_state_2            1737            Not referred to
+           ipcb_state_2            1760            Not referred to
+           id_req_state            1789            Not referred to
+           LOCALS                 ADDRESS
+           is0b                    1653 
+           is0d                    1676 
+           is0f                    1683 
+           is0g                    168C 
+           is0h                    169A 
+           is0k                    16A7 
+           is0j                    16AE 
+           is0m                    16B3 
+           is0n                    16B9 
+           is0c                    16BD 
+           i1s1a                   16CD 
+           i2s1a                   16E6 
+           ibs1a                   16FF 
+           i1s2a                   1718 
+           i2s2a                   1741 
+           ibs2a                   176A 
+           idrq1                   179B 
+           idrq2                   179E 
+           is0jt                   17A8 
+
+    *************************************************************************
+
+  FILE NAME : obj\calc.r15
+  PROGRAM MODULE, NAME : calc
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           TAP                     0006 
+           a_vp                    0002 
+           a_par                   0004 
+           a_val                   0006 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 0054 - 006D
+           LOCALS                 ADDRESS
+           r_aval                  0054 
+           r_avall                 0054 
+           r_avalh                 0056 
+           r_t1                    0058 
+           r_t2                    005A 
+           r_val                   005C 
+           r_src                   005E 
+           r_srp                   0060 
+           r_par                   0062 
+           r_mlt                   0064 
+           r_nv                    0066 
+           r_nd                    0068 
+           r_mp                    006A 
+           r_vp                    006C 
+    -------------------------------------------------------------------------
+adata
+  Relative segment, address : 9656 - 9657
+           ENTRIES                ADDRESS          REF BY MODULE
+           seed                    9656            lfo
+    -------------------------------------------------------------------------
+hcode
+  Relative segment, address : 17B8 - 18B3
+           ENTRIES                ADDRESS          REF BY MODULE
+           srand                   17B8            main
+           rand                    17C2            env
+           do_mod_dst              17EA            ipc1
+                                                   ipc2
+           set_pan                 1873            ipc1
+                                                   ipc2
+                                                   main
+           LOCALS                 ADDRESS
+           rand_nz                 17D4 
+           rand_nc                 17DE 
+           rand_set                17E1 
+           rand_done               17E4 
+           dmd_do                  1832 
+           dmd_unf                 1856 
+           dmd_rok                 185A 
+           dmd_do_next             185D 
+           dmd_upd                 1864 
+           dmd_ret                 186F 
+           setp_1                  1886 
+           setp_2                  18A0 
+           setp_3                  18AC 
+           setp_4                  18AF 
+
+    *************************************************************************
+
+  FILE NAME : obj\dosrc.r15
+  PROGRAM MODULE, NAME : dosrc
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           a_val                   0006 
+           a_ns                    0004 
+           a_vp                    0002 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 006E - 0071
+           LOCALS                 ADDRESS
+           rd_s0                   006E 
+           rd_s1                   0070 
+    -------------------------------------------------------------------------
+hcode
+  Relative segment, address : 18B4 - 18CD
+           ENTRIES                ADDRESS          REF BY MODULE
+           do_mod_src              18B4            ipc2
+
+    *************************************************************************
+
+  FILE NAME : obj\domods.r15
+  PROGRAM MODULE, NAME : domods
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           DAC_A_VCO1              0040 
+           DAC_A_VCO2              0048 
+           DAC_A_MM                0050 
+           DAC_A_OB                0058 
+           DAC_A_VCA               0060 
+           DAC_B_VCO1              0044 
+           DAC_B_VCO2              004C 
+           DAC_B_MM                0054 
+           DAC_B_OB                005C 
+           DAC_B_VCA               0064 
+           rm_val                  00EC 
+           rm_valh                 00EE 
+           rm_vpr                  00F0 
+           rm_mvl                  00F2 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 0074 - 008D
+           ENTRIES                ADDRESS          REF BY MODULE
+           dm_regs                 0074            Not referred to
+           LOCALS                 ADDRESS
+           r_aval                  0074 
+           r_avalh                 0076 
+           r_vp                    0078 
+           r_mp                    007A 
+           r_nm                    007C 
+           r_mlt                   007E 
+           r_src                   0080 
+           r_srp                   0082 
+           r_dsp                   0084 
+           r_dac                   0086 
+           r_cvp                   0088 
+           r_ovp                   008A 
+           r_temp                  008C 
+    -------------------------------------------------------------------------
+hcode
+  Relative segment, address : 18CE - 1CDE
+           ENTRIES                ADDRESS          REF BY MODULE
+           exec_mods               18CE            Not referred to
+           do_mods                 1C87            hdw
+           mod_vca                 1C95            ipc1
+                                                   ipc2
+           LOCALS                 ADDRESS
+           umsetup                 1939 
+           mmsetup                 19EE 
+           dm_ov1                  1A09 
+           dm_unf1                 1A10 
+           dm_nvt1                 1A13 
+           dm_ov2                  1A2B 
+           dm_unf2                 1A32 
+           dm_nvt2                 1A35 
+           dm_ov3                  1A4C 
+           dm_unf3                 1A53 
+           dm_nvt3                 1A56 
+           dm_ov4                  1A6C 
+           dm_unf4                 1A73 
+           dm_nvt4                 1A76 
+           dm_mod_loop             1A92 
+           dm_upd                  1ABC 
+           dm_upd1                 1AC2 
+           dm_next                 1ACC 
+           dt_is_t                 1AD5 
+           dt_is_r                 1AD7 
+           dm_ovf                  1AF6 
+           dm_unf                  1AFE 
+           dm_neg                  1B04 
+           dm_env                  1B0B 
+           dm_env1                 1B2B 
+           dm_vca1                 1B40 
+           dm_vcab                 1B50 
+           dm_done                 1B55 
+           dm_outa                 1B61 
+           dm_outa1                1B79 
+           dm_outa1a               1B81 
+           dm_outa2                1B9E 
+           dm_outa2a               1BA6 
+           dm_outa3                1BC2 
+           dm_outa3a               1BCA 
+           dm_outa4                1BE6 
+           dm_outa4a               1BEE 
+           dm_outb                 1BF4 
+           dm_outb1                1C0C 
+           dm_outb1a               1C14 
+           dm_outb2                1C31 
+           dm_outb2a               1C39 
+           dm_outb3                1C55 
+           dm_outb3a               1C5D 
+           dm_outb4                1C79 
+           dm_outb4a               1C81 
+           m_vca0                  1CC0 
+           m_vca1                  1CD6 
+
+    *************************************************************************
+
+  FILE NAME : obj\voicea.r15
+  PROGRAM MODULE, NAME : voicea
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           SNAPIT                  0000 
+           DEBUG_HSI               0000 
+           DEBUG_ALL               0000 
+           DEBUG_TUN               0000 
+           DEBUG_CVT               0000 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 008E - 008F
+           ENTRIES                ADDRESS          REF BY MODULE
+           ipc_temp                008E            Not referred to
+    -------------------------------------------------------------------------
+hcode
+  Relative segment, address : 1CE0 - 1D30
+           ENTRIES                ADDRESS          REF BY MODULE
+           handle_ipc              1CE0            hdw
+           ipc_wait                1D07            Not referred to
+           reset_parser            1D0D            ipc1
+           limit                   1D1D            touchup
+                                                   tune
+           LOCALS                 ADDRESS
+           hi_w1s                  1CE2 
+           hi_w1r                  1CFD 
+           hi_w1e                  1D01 
+           h1_done                 1D06 
+           limit1                  1D26 
+           limit2                  1D30 
+
+    *************************************************************************
+
+  FILE NAME : obj\gate.r15
+  PROGRAM MODULE, NAME : gate
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           r_op                    00EA 
+           r_val                   00EC 
+           r_valh                  00EE 
+           r_fp                    00F0 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : Not applicable
+    -------------------------------------------------------------------------
+acode
+  Relative segment, address : 2DB2 - 3347
+           ENTRIES                ADDRESS          REF BY MODULE
+           gate_ungate1            2DB2            ipc1
+           velinv_0                2F4B            Not referred to
+           gate_ungate2            307D            ipc1
+           velinv_1                3216            Not referred to
+           LOCALS                 ADDRESS
+           gate_0                  2DDB 
+           novf_01                 2E20 
+           nneg_01                 2E28 
+           usetr_01                2E2C 
+           stnote_01               2E50 
+           novf_02                 2E79 
+           nneg_02                 2E81 
+           usetr_02                2E85 
+           stnote_02               2EA9 
+           novf_f00                2EB8 
+           nneg_f00                2EC0 
+           usetr_f00               2EC4 
+           stnote_f00              2EF0 
+           novf_f01                2F05 
+           nneg_f01                2F0D 
+           usetr_f01               2F11 
+           stnote_f01              2F3D 
+           gi1_0                   2F5C 
+           gi2_0                   2F66 
+           gate_0_dogate           2FC3 
+           gate_0_gated            2FCE 
+           gu_pinit_0              2FD6 
+           ungate_0                303A 
+           gu_nl_0                 304F 
+           gu_pfix_0               3058 
+           gu_done_0               306A 
+           gate_1                  30A6 
+           novf_11                 30EB 
+           nneg_11                 30F3 
+           usetr_11                30F7 
+           stnote_11               311B 
+           novf_12                 3144 
+           nneg_12                 314C 
+           usetr_12                3150 
+           stnote_12               3174 
+           novf_f10                3183 
+           nneg_f10                318B 
+           usetr_f10               318F 
+           stnote_f10              31BB 
+           novf_f11                31D0 
+           nneg_f11                31D8 
+           usetr_f11               31DC 
+           stnote_f11              3208 
+           gi1_1                   3227 
+           gi2_1                   3231 
+           gate_1_dogate           328E 
+           gate_1_gated            3299 
+           gu_pinit_1              32A1 
+           ungate_1                3305 
+           gu_nl_1                 331A 
+           gu_pfix_1               3323 
+           gu_done_1               3335 
+
+    *************************************************************************
+
+  FILE NAME : obj\env.r15
+  PROGRAM MODULE, NAME : env
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           RANDVALC                037E 
+           RANDVALO                045E 
+           ENV_FUZZ                0008 
+           B_GATE                  0000 
+           B_UNGATE                0007 
+           M_GATE                  0001 
+           M_UNGATE                0080 
+           B_TRIG                  0000 
+           M_TRIG                  0001 
+           r_kb                    00EC 
+           STAGE_STOP              0000 
+           STAGE_REPEAT            0001 
+           STAGE_ATTACKDELAY       0002 
+           STAGE_ATTACK            0003 
+           STAGE_DECAYDELAY        0004 
+           STAGE_DECAY             0005 
+           STAGE_SUSTAIN           0006 
+           STAGE_SUSTAINDECAY      0007 
+           STAGE_RELEASESETUP      0008 
+           STAGE_RELEASE           0009 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 0090 - 00A9
+           ENTRIES                ADDRESS          REF BY MODULE
+           env_regs                0090            Not referred to
+           LOCALS                 ADDRESS
+           r_ax                    0090 
+           r_t0                    0092 
+           r_t1                    0094 
+           r_t2                    0096 
+           r_cnt                   0098 
+           r_vp                    009A 
+           r_ep                    009C 
+           r_stage                 009E 
+           r_val                   00A0 
+           r_gate                  00A2 
+           r_trig                  00A3 
+           r_flags                 00A4 
+           r_tc                    00A6 
+           r_track                 00A8 
+    -------------------------------------------------------------------------
+acode
+  Relative segment, address : 3348 - 3C56
+           ENTRIES                ADDRESS          REF BY MODULE
+           do_env                  335C            hdw
+           init_envs               36EE            main
+           LOCALS                 ADDRESS
+           stage_table             3348 
+           eal_next_voice          3360 
+           env_adv_loop            3380 
+           ea_ntg                  338E 
+           eal_go                  33B4 
+           eal_nomod               33C8 
+           eal_notrig              33D0 
+           eal_cadc                33E1 
+           eal_nad                 33FA 
+           eal_ungate              3402 
+           eal_proc_env            3405 
+           eal_ret                 3410 
+           re_tick                 3415 
+           eal_eos                 3419 
+           eal_nsvv                3431 
+           eal_vup                 3436 
+           eal_eol                 3444 
+           eal_exit                345A 
+           exe_repeat              345B 
+           exe_rpt_nr              346E 
+           exe_rpt_ng              3473 
+           su_atck_del             3478 
+           sc_0000                 34A1 
+           exe_attackdelay         34A9 
+           su_attack               34BA 
+           tr0_0001                34F1 
+           tr1_0001                34F5 
+           exe_attack              34FF 
+           su_dcay_del             3508 
+           tr0_0002                353C 
+           tr1_0002                3540 
+           exe_decaydelay          354A 
+           su_decay                3563 
+           su_dcy1                 356B 
+           tr0_0003                3595 
+           tr1_0003                3599 
+           exe_decay               35A5 
+           fz_0004                 35BB 
+           fz_0005                 35DE 
+           at_sustain              35E6 
+           su_sustain              35EB 
+           gate_sust               35F7 
+           exe_sustain             35FA 
+           open_gate               3603 
+           su_sus_dcay             360C 
+           not_a_gate              3618 
+           tr0_0006                364B 
+           tr1_0006                364F 
+           exe_sustaindecay        3659 
+           fz_0007                 366C 
+           esd_rel                 3674 
+           exe_su_release          3676 
+           ers_ng                  3680 
+           ers_nd                  3689 
+           ers_nn                  3690 
+           tr0_0008                36BA 
+           tr1_0008                36BE 
+           exe_release             36C8 
+           exe_zero                36D6 
+           exe_done                36D8 
+           exe_dorepeat            36E4 
+           exe_norepeat            36E9 
+           exe_stop                36EC 
+
+    *************************************************************************
+
+  FILE NAME : obj\mods.r15
+  PROGRAM MODULE, NAME : mods
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : 53DE - 5511
+           ENTRIES                ADDRESS          REF BY MODULE
+           mod_ins                 53DE            ipc2
+           mod_rmv                 546C            ipc2
+
+    *************************************************************************
+
+  FILE NAME : obj\ipc1.r15
+  PROGRAM MODULE, NAME : ipc1
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : 5512 - 60A1
+           ENTRIES                ADDRESS          REF BY MODULE
+           get_tt                  57BA            Not referred to
+           init_ipc                5512            main
+           never                   5DDB            Not referred to
+           part_misc               5859            Not referred to
+           part_misc1              5EDF            Not referred to
+           part_misc2              600B            Not referred to
+           part_miscb              607E            Not referred to
+           perform_param1          5EFD            Not referred to
+           perform_param2          602C            Not referred to
+           perform_paramb          6099            Not referred to
+           preset_param1           5EE9            Not referred to
+           preset_param2           6016            Not referred to
+           preset_paramb           6087            Not referred to
+           proc_both               6042            Not referred to
+           set_channel1            5DE5            Not referred to
+           set_channel2            5F11            Not referred to
+           set_transpose           56A4            ipc2
+           user_mod1               5EF3            Not referred to
+           user_mod2               6021            Not referred to
+           user_modb               6090            Not referred to
+           voice_misc              5B37            Not referred to
+           voice_misc1             5F07            Not referred to
+           voice_misc2             6037            Not referred to
+    -------------------------------------------------------------------------
+CDATA
+  Relative segment, address : 1494 - 1509
+    -------------------------------------------------------------------------
+IDATA
+  Relative segment, address : 8000 - 8075
+           ENTRIES                ADDRESS          REF BY MODULE
+           red1_tbl                8046            ipca
+           red2_tbl                8056            ipca
+           redb_tbl                8066            ipca
+           stch_tbl                8018            ipca
+           stpt_tbl                8038            ipca
+           stvc_tbl                8000            ipca
+
+    *************************************************************************
+
+  FILE NAME : obj\ipc2.r15
+  PROGRAM MODULE, NAME : ipc2
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : 60A2 - 78DD
+           ENTRIES                ADDRESS          REF BY MODULE
+           perform_param           774B            ipc1
+           preset_param            6BF3            ipc1
+           set_adj                 60A2            tune
+           set_env                 6888            Not referred to
+           set_lfo                 6748            main
+           set_mlt                 6185            Not referred to
+           set_vcf                 655B            Not referred to
+           set_vco                 61EF            Not referred to
+           user_mod                747A            ipc1
+
+    *************************************************************************
+
+  FILE NAME : obj\lfo.r15
+  PROGRAM MODULE, NAME : lfo
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           TAP                     0006 
+           TRMASK                  00FF 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 00AC - 00BB
+           ENTRIES                ADDRESS          REF BY MODULE
+           lfo_regs                00AC            Not referred to
+           LOCALS                 ADDRESS
+           r_temp2                 00AC 
+           r_temp2l                00AC 
+           r_temp2h                00AE 
+           r_tseg                  00B0 
+           r_vcur                  00B0 
+           r_temp3                 00B2 
+           r_vp                    00B4 
+           r_lp                    00B6 
+           r_t1                    00B8 
+           r_t2                    00BA 
+    -------------------------------------------------------------------------
+acode
+  Relative segment, address : 3C58 - 46B0
+           ENTRIES                ADDRESS          REF BY MODULE
+           do_lfo                  3C58            hdw
+           LOCALS                 ADDRESS
+           ?A10003                 3C84 
+           ?A10002                 3CA4 
+           ?A10005                 3CA7 
+           ?A10004                 3CAB 
+           case_3_A1               3CC3 
+           rand_test_A1            3D04 
+           rand_nz_A1              3D16 
+           rand_nc_A1              3D20 
+           rand_set_A1             3D23 
+           rand_done_A1            3D26 
+           ?A10006                 3D43 
+           case_1_A1               3D45 
+           case_2_A1               3D52 
+           case_0_A1               3D5A 
+           ?A10007                 3D70 
+           ?A10008                 3D77 
+           ?A10014                 3D90 
+           ?A10001                 3D96 
+           ?A10016                 3DA1 
+           ?A10024                 3DC1 
+           ?A10027                 3DE5 
+           ?A10022                 3DEB 
+           ?A10023                 3DF1 
+           ?A10018                 3DFA 
+           jt_A1                   3E0C 
+           ?A1_next                3E14 
+           ?A20003                 3E3C 
+           ?A20002                 3E5C 
+           ?A20005                 3E5F 
+           ?A20004                 3E63 
+           case_3_A2               3E7B 
+           rand_test_A2            3EBC 
+           rand_nz_A2              3ECE 
+           rand_nc_A2              3ED8 
+           rand_set_A2             3EDB 
+           rand_done_A2            3EDE 
+           ?A20006                 3EFB 
+           case_1_A2               3EFD 
+           case_2_A2               3F0A 
+           case_0_A2               3F12 
+           ?A20007                 3F28 
+           ?A20008                 3F2F 
+           ?A20014                 3F48 
+           ?A20001                 3F4E 
+           ?A20016                 3F59 
+           ?A20024                 3F79 
+           ?A20027                 3F9D 
+           ?A20022                 3FA3 
+           ?A20023                 3FA9 
+           ?A20018                 3FB2 
+           jt_A2                   3FC4 
+           ?A2_next                3FCC 
+           ?A30003                 3FF4 
+           ?A30002                 4014 
+           ?A30005                 4017 
+           ?A30004                 401B 
+           case_3_A3               4033 
+           rand_test_A3            4074 
+           rand_nz_A3              4086 
+           rand_nc_A3              4090 
+           rand_set_A3             4093 
+           rand_done_A3            4096 
+           ?A30006                 40B3 
+           case_1_A3               40B5 
+           case_2_A3               40C2 
+           case_0_A3               40CA 
+           ?A30007                 40E0 
+           ?A30008                 40E7 
+           ?A30014                 4100 
+           ?A30001                 4106 
+           ?A30016                 4111 
+           ?A30024                 4131 
+           ?A30027                 4155 
+           ?A30022                 415B 
+           ?A30023                 4161 
+           ?A30018                 416A 
+           jt_A3                   417C 
+           ?A3_next                4184 
+           ?B10003                 41B0 
+           ?B10002                 41D0 
+           ?B10005                 41D3 
+           ?B10004                 41D7 
+           case_3_B1               41EF 
+           rand_test_B1            4230 
+           rand_nz_B1              4242 
+           rand_nc_B1              424C 
+           rand_set_B1             424F 
+           rand_done_B1            4252 
+           ?B10006                 426F 
+           case_1_B1               4271 
+           case_2_B1               427E 
+           case_0_B1               4286 
+           ?B10007                 429C 
+           ?B10008                 42A3 
+           ?B10014                 42BC 
+           ?B10001                 42C2 
+           ?B10016                 42CD 
+           ?B10024                 42ED 
+           ?B10027                 4311 
+           ?B10022                 4317 
+           ?B10023                 431D 
+           ?B10018                 4326 
+           jt_B1                   4338 
+           ?B1_next                4340 
+           ?B20003                 4368 
+           ?B20002                 4388 
+           ?B20005                 438B 
+           ?B20004                 438F 
+           case_3_B2               43A7 
+           rand_test_B2            43E8 
+           rand_nz_B2              43FA 
+           rand_nc_B2              4404 
+           rand_set_B2             4407 
+           rand_done_B2            440A 
+           ?B20006                 4427 
+           case_1_B2               4429 
+           case_2_B2               4436 
+           case_0_B2               443E 
+           ?B20007                 4454 
+           ?B20008                 445B 
+           ?B20014                 4474 
+           ?B20001                 447A 
+           ?B20016                 4485 
+           ?B20024                 44A5 
+           ?B20027                 44C9 
+           ?B20022                 44CF 
+           ?B20023                 44D5 
+           ?B20018                 44DE 
+           jt_B2                   44F0 
+           ?B2_next                44F8 
+           ?B30003                 4520 
+           ?B30002                 4540 
+           ?B30005                 4543 
+           ?B30004                 4547 
+           case_3_B3               455F 
+           rand_test_B3            45A0 
+           rand_nz_B3              45B2 
+           rand_nc_B3              45BC 
+           rand_set_B3             45BF 
+           rand_done_B3            45C2 
+           ?B30006                 45DF 
+           case_1_B3               45E1 
+           case_2_B3               45EE 
+           case_0_B3               45F6 
+           ?B30007                 460C 
+           ?B30008                 4613 
+           ?B30014                 462C 
+           ?B30001                 4632 
+           ?B30016                 463D 
+           ?B30024                 465D 
+           ?B30027                 4681 
+           ?B30022                 4687 
+           ?B30023                 468D 
+           ?B30018                 4696 
+           jt_B3                   46A8 
+           ?B3_next                46B0 
+
+    *************************************************************************
+
+  FILE NAME : obj\touchup.r15
+  PROGRAM MODULE, NAME : touchup
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           CF_OFF                  0022 
+           TUNECON                 083A 
+           TUNETIME                07D0 
+           CENTS                   01F4 
+           A_V1_CORR               07D0 
+           A_V2_CORR               03E8 
+           B_V1_CORR               05DC 
+           B_V2_CORR               01F4 
+           r_t0                    00EA 
+           r_t2                    00EC 
+           r_t4                    00EE 
+           r_t6                    00F0 
+           r_e2                    00EA 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+hcode
+  Relative segment, address : 1D32 - 1F2F
+           ENTRIES                ADDRESS          REF BY MODULE
+           touchup                 1D32            tune
+           cfoff                   1F26            Not referred to
+           a_v1_corr               1F28            Not referred to
+           a_v2_corr               1F2A            Not referred to
+           b_v1_corr               1F2C            Not referred to
+           b_v2_corr               1F2E            Not referred to
+           LOCALS                 ADDRESS
+           msw_0000                1E5A 
+           ti_wait1                1E66 
+           ti_meas1                1E71 
+
+    *************************************************************************
+
+  FILE NAME : obj\tune.r15
+  PROGRAM MODULE, NAME : tune
+           ABSOLUTE LOCALS        ADDRESS
+           ===============        =======
+           SNAPIT                  0000 
+           DEBUG_TUN               0000 
+           DEBUG_HSI               0000 
+           DEBUG_CVT               0000 
+           ALWAYS                  0000 
+           DISINT                  0000 
+           WAIT_IPC                0000 
+           T_INIT                  0014 
+           T_STABLE                0004 
+           HSIDIV                  0004 
+           TUNEMAX                 0010 
+           HSI_DSBL                00AA 
+           BITA0                   0001 
+           BITA1                   0002 
+           BITA2                   0004 
+           BITA3                   0008 
+           BITB0                   0010 
+           BITB1                   0020 
+           BITB2                   0040 
+           BITB3                   0080 
+           r_t0                    00EA 
+           r_t2                    00EC 
+           r_t4                    00EE 
+           r_t6                    00F0 
+           r_e2                    00EA 
+           r_e6                    00EC 
+           r_pr1                   00EE 
+           r_pr2                   00F0 
+
+
+  SEGMENTS IN THE MODULE
+  ======================
+aregs
+  Relative segment, address : 00BC - 00DF
+           ENTRIES                ADDRESS          REF BY MODULE
+           r_ptrs                  00BC            touchup
+           tunetry                 00C2            Not referred to
+           hsicount                00C8            hdw
+                                                   touchup
+           hsiflags                00CA            voicea
+                                                   touchup
+           hsi0_cnt                00CC            Not referred to
+           hsi1_cnt                00CD            Not referred to
+           hsi2_cnt                00CE            Not referred to
+           hsi3_cnt                00CF            Not referred to
+           r_stat                  00C4            voicea
+           r_time                  00C6            Not referred to
+           hsi0_val                00D0            touchup
+           hsi1_val                00D2            touchup
+           hsi2_val                00D4            touchup
+           hsi3_val                00D6            touchup
+           hsi0_last               00D8            Not referred to
+           hsi1_last               00DA            Not referred to
+           hsi2_last               00DC            Not referred to
+           hsi3_last               00DE            Not referred to
+           LOCALS                 ADDRESS
+           r_srcw                  00BC 
+           r_dstw                  00BE 
+           r_mul                   00BC 
+           r_res                   00BE 
+           r_test                  00BC 
+           r_tstat                 00BE 
+           r_wcnt                  00C0 
+    -------------------------------------------------------------------------
+adata
+  Relative segment, address : 9658 - 9773
+           ENTRIES                ADDRESS          REF BY MODULE
+           cvsave                  9658            Not referred to
+           tune_vars               96D8            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           a_v1_off                96D8            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           a_v2_off                96DA            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           a_mm_off                96DC            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           a_ob_off                96DE            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           b_v1_off                96E0            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           b_v2_off                96E2            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           b_mm_off                96E4            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           b_ob_off                96E6            domods
+                                                   mods
+                                                   ipc1
+                                                   ipc2
+                                                   touchup
+                                                   main
+           a_v1_scl                96E8            touchup
+           a_v2_scl                96EA            touchup
+           a_mm_scl                96EC            touchup
+           a_ob_scl                96EE            touchup
+           b_v1_scl                96F0            touchup
+           b_v2_scl                96F2            touchup
+           b_mm_scl                96F4            touchup
+           b_ob_scl                96F6            touchup
+           tune_save               96F8            mods
+                                                   ipc1
+                                                   ipc2
+                                                   main
+           a_v1_offy               9718            touchup
+           a_v2_offy               971A            touchup
+           a_mm_offy               971C            Not referred to
+           a_ob_offy               971E            Not referred to
+           b_v1_offy               9720            touchup
+           b_v2_offy               9722            touchup
+           b_mm_offy               9724            Not referred to
+           b_ob_offy               9726            Not referred to
+           a_v1_scly               9728            Not referred to
+           a_v2_scly               972A            Not referred to
+           a_mm_scly               972C            Not referred to
+           a_ob_scly               972E            Not referred to
+           b_v1_scly               9730            Not referred to
+           b_v2_scly               9732            Not referred to
+           b_mm_scly               9734            Not referred to
+           b_ob_scly               9736            Not referred to
+           a_v1_e2                 9738            touchup
+           a_v2_e2                 973A            touchup
+           a_mm_e2                 973C            Not referred to
+           a_ob_e2                 973E            Not referred to
+           b_v1_e2                 9740            touchup
+           b_v2_e2                 9742            touchup
+           b_mm_e2                 9744            Not referred to
+           b_ob_e2                 9746            Not referred to
+           a_v1_e6                 9748            Not referred to
+           a_v2_e6                 974A            Not referred to
+           a_mm_e6                 974C            Not referred to
+           a_ob_e6                 974E            Not referred to
+           b_v1_e6                 9750            Not referred to
+           b_v2_e6                 9752            Not referred to
+           b_mm_e6                 9754            Not referred to
+           b_ob_e6                 9756            Not referred to
+           a_v1_tcnt               9758            Not referred to
+           a_v2_tcnt               975A            Not referred to
+           a_mm_tcnt               975C            Not referred to
+           a_ob_tcnt               975E            Not referred to
+           b_v1_tcnt               9760            Not referred to
+           b_v2_tcnt               9762            Not referred to
+           b_mm_tcnt               9764            Not referred to
+           b_ob_tcnt               9766            Not referred to
+           tunemax                 9768            Not referred to
+           retune                  976A            Not referred to
+           w_time                  976C            Not referred to
+           prod1                   976E            touchup
+           prod2                   9770            touchup
+    -------------------------------------------------------------------------
+hcode
+  Relative segment, address : 1F30 - 1F5E
+           ENTRIES                ADDRESS          REF BY MODULE
+           hsigo                   1F30            touchup
+    -------------------------------------------------------------------------
+acode
+  Relative segment, address : 46B2 - 53CB
+           ENTRIES                ADDRESS          REF BY MODULE
+           hsi_dav_isr             46B2            hdw
+           tuner                   47A3            hdw
+           tunecalc                4D02            Not referred to
+           calcdone                4F64            Not referred to
+           tuning_done             527C            Not referred to
+           LOCALS                 ADDRESS
+           hsi_ent                 46B3 
+           hsi_np0                 46C9 
+           hsi_nv0                 46CF 
+           hsi_np1                 46DC 
+           hsi_nv1                 46E2 
+           hsi_np2                 46EF 
+           hsi_nv2                 46F5 
+           hsi_np3                 4702 
+           hsi_nv3                 4708 
+           hsi_ckr                 470A 
+           hsi_cp0                 4723 
+           hsi_ct0                 4729 
+           hsi_cv0                 472B 
+           hsi_cp1                 4744 
+           hsi_ct1                 474A 
+           hsi_cv1                 474C 
+           hsi_cp2                 4765 
+           hsi_ct2                 476B 
+           hsi_cv2                 476D 
+           hsi_cp3                 4786 
+           hsi_ct3                 478C 
+           hsi_cv3                 478E 
+           hsi_chk                 478E 
+           hsi_eod                 4793 
+           not_eod                 47A1 
+           need_tuned              47EE 
+           was_tuned               484E 
+           try_tuning              4936 
+           msw_0000                4A61 
+           ti_wait1                4A74 
+           ti_meas1                4A7F 
+           msw_0001                4B1C 
+           ti_wait2                4B26 
+           ti_meas2                4B31 
+           msw_0002                4C24 
+           ti_wait3                4C2E 
+           ti_meas3                4C39 
+           msw_0003                4CD6 
+           ti_wait4                4CE0 
+           ti_meas4                4CEB 
+           a_v1_c_tt               4F7E 
+           a_v1_c_nt               4F9B 
+           a_v1_c_dt               4FA0 
+           a_v2_c_tt               4FB5 
+           a_v2_c_nt               4FD2 
+           a_v2_c_dt               4FD7 
+           a_mm_c_tt               4FEC 
+           a_mm_c_nt               5009 
+           a_mm_c_dt               500E 
+           a_ob_c_tt               5023 
+           a_ob_c_nt               5040 
+           a_ob_c_dt               5045 
+           b_v1_c_tt               5064 
+           b_v1_c_nt               5081 
+           b_v1_c_dt               5086 
+           b_v2_c_tt               509B 
+           b_v2_c_nt               50B8 
+           b_v2_c_dt               50BD 
+           b_mm_c_tt               50D2 
+           b_mm_c_nt               50EF 
+           b_mm_c_dt               50F4 
+           b_ob_c_tt               5109 
+           b_ob_c_nt               5126 
+           b_ob_c_dt               512B 
+           not_tuned               5146 
+           adjust_em               514F 
+           skip_adjo_0004          5166 
+           skip_adjo_0005          5178 
+           skip_adjo_0006          518A 
+           skip_adjo_0007          519C 
+           skip_adjf_0008          51AE 
+           skip_adjf_0009          51C0 
+           skip_adjf_0010          51D2 
+           skip_adjf_0011          51E4 
+           skip_adjo_0012          51FB 
+           skip_adjo_0013          520D 
+           skip_adjo_0014          521F 
+           skip_adjo_0015          5231 
+           skip_adjf_0016          5243 
+           skip_adjf_0017          5255 
+           skip_adjf_0018          5267 
+           skip_adjf_0019          5279 
+           msw_0020                53B2 
+           cfoff                   53C8 
+           cfscl                   53CA 
+
+    *************************************************************************
+
+  FILE NAME : obj\main.r15
+  PROGRAM MODULE, NAME : main
+
+  SEGMENTS IN THE MODULE
+  ======================
+CODE
+  Relative segment, address : 78DE - 7F84
+           ENTRIES                ADDRESS          REF BY MODULE
+           main                    78DE            CSTARTUP
+
+                ****************************************
+                *                                      *
+                *        SEGMENTS IN DUMP ORDER        *
+                *                                      *
+                ****************************************
+
+ SEGMENT               START ADDRESS    END ADDRESS  TYPE  ORG  P/N  ALIGN
+ =======               =============    ===========  ====  ===  ===  =====
+ZVECT                           Not applicable        rel  stc  pos   1     
+CSTR                            Not applicable        rel  flt  pos   1     
+CONST                       0100     -     1493       rel  flt  pos   1     
+CDATA                       1494     -     1509       rel  flt  pos   1     
+CCSTR                           Not applicable        rel  flt  pos   1     
+RCODE                       150A     -     1649       rel  flt  pos   1     
+hcode                       164A     -     1F5E       rel  flt  pos   1     
+CSTART                      2080     -     208C       rel  stc  pos   1     
+acode                       208E     -     53CB       rel  flt  pos   1     
+CODE                        53CC     -     7F84       rel  flt  pos   1     
+DATA                            Not applicable        rel  stc  pos   1     
+IDATA                       8000     -     8075       rel  flt  pos   1     
+UDATA                       8076     -     95D5       rel  flt  pos   1     
+ECSTR                           Not applicable        rel  flt  pos   1     
+WCSTR                           Not applicable        rel  flt  pos   1     
+TEMP                            Not applicable        rel  flt  pos   1     
+adata                       95D6     -     9773       rel  flt  pos   1     
+CSTACK                      F000     -     F7FF       rel  stc  pos   1     
+cregs                       001A     -     0023       rel  stc  pos   1     
+aregs                       0024     -     00DF       rel  stc  pos   1     
+ctemp                       00EA     -     00FF       rel  stc  pos   1     
+                            2000     -     2013      aseg  
+                            2018     -     2019      aseg  
+                            2030     -     203F      aseg  
+
+                ****************************************
+                *                                      *
+                *        END OF CROSS REFERENCE        *
+                *                                      *
+                ****************************************
+
+Errors: none
+Warnings: none
+

@@ -1,0 +1,154 @@
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+ЁOB-MX Data Structures in VOICE.H and VOICE.INC             Ё
+Ё                                                           Ё
+ЁRevision:  69  1993-12-01  D.N. Lynx Crowe                 Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+Ё		struct vco				0018    24     vco_size	    Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+0000     0     BYTE vco_pitch
+0001     1     BYTE vco_fine
+0002     2     BYTE vco_track
+0003     3     BYTE vco_port
+0004     4     BYTE vco_pwidth
+0005     5     BYTE vco_wshape
+0006     6     BYTE vco_vcofm
+0007     7     BYTE vco_env1fm
+0008     8     BYTE vco_lfo1fm
+0009     9     BYTE vco_pwm
+
+000A    10     WORD vco_ptcnt
+000C    12     WORD vco_ptick
+000E    14     WORD vco_pincl
+0010    16     WORD vco_pinch
+0012    18     WORD vco_paccl
+0014    20     WORD vco_pacch
+0016    22     WORD vco_pdiff
+
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+Ё		struct vcf				0008     8     vcf_size	    Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+0000     0     BYTE vcf_vco1
+0001     1     BYTE vcf_vco2
+0002     2     BYTE vcf_noise
+0003     3     BYTE vcf_freq
+0004     4     BYTE vcf_reson
+0005     5     BYTE vcf_envfm
+0006     6     BYTE vcf_lfofm
+0007     7     BYTE vcf_kbtrk
+
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+Ё		struct  lfo				0018    24     lfo_size	    Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+0000     0     BYTE lfo_delay
+0001     1     BYTE lfo_rate
+0002     2     BYTE lfo_offset
+0003     3     BYTE lfo_quant
+0004     4     BYTE lfo_shape
+0005     5     BYTE lfo_lpad
+
+0006     6     WORD lfo_tcnt
+0008     8     WORD lfo_tick
+000A    10     WORD lfo_dtcnt
+000C    12     WORD lfo_dtick
+000E    14     WORD lfo_cntr
+0010    16     WORD lfo_dcntr
+0012    18     WORD lfo_rand      
+0014    20     WORD lfo_vold      
+0016    22     WORD lfo_vnew      
+
+
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+Ё		struct env				002A    42     env_size	    Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+0000     0     BYTE env_mode
+0001     1     BYTE env_attack
+0002     2     BYTE env_atck_del
+0003     3     BYTE env_decay
+0004     4     BYTE env_dcay_del
+0005     5     BYTE env_sustain
+0006     6     BYTE env_sus_dcay
+0007     7     BYTE env_release
+0008     8     BYTE env_vel_sens
+0009     9     BYTE env_estep
+
+000A    10     WORD env_etcnt
+000C    12     WORD env_etick
+000E    14     WORD env_eincr
+0010    16     WORD env_ecntr
+0012    18     WORD env_current
+0014    20     WORD env_s_vel
+
+0016    22     WORD *env_p_vcur
+0018    24     WORD *env_p_vout
+001A    26     WORD *env_p_attack
+001C    28     WORD *env_p_atck_del
+001E    30     WORD *env_p_decay
+0020    32     WORD *env_p_dcay_del
+0022    34     WORD *env_p_sustain
+0024    36     WORD *env_p_sus_dcay
+0026    38     WORD *env_p_release
+0028    40     WORD *env_p_vel_sens
+
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+Ё		struct mod				0010    16     mod_size	    Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+0000     0     WORD	mod_flg
+0002     2     BYTE	mod_src
+0003     3     BYTE	mod_dst
+0004     4     INT	mod_mlt
+0006     6     INT	mod_srp
+0008     8     INT	mod_dsp
+000A    10     INT	mod_cvp
+000C    12     WORD	*mod_dac
+000E    14     struct mod *mod_nxd
+
+зддддддддддддддддддддддддддддддддддддддддддддддддддддддддддд©
+Ё		struct voice			0616 1558      voice_size   Ё
+юддддддддддддддддддддддддддддддддддддддддддддддддддддддддддды
+
+0000    0    BYTE voice_vtrig
+0001    1    BYTE voice_vgate
+
+0002    2    BYTE voice_legato
+0003    3    BYTE voice_port
+
+0004    4    BYTE voice_pedal
+0005    5    BYTE voice_tuning
+
+0006    6    WORD voice_m_level
+0008    8    WORD voice_p_level
+000A   10    WORD voice_m_pan
+000C   12    WORD voice_p_pan
+000E   14    WORD voice_v_pan
+
+0010   16    WORD voice_vel
+0012   18    WORD voice_note
+0014   20    WORD voice_note1
+0016   22    WORD voice_note2
+
+0018   24    WORD voice_trans
+001A   26    WORD voice_offset
+001C   28    WORD voice_pwsens
+
+001E   30    WORD voice_note_ons
+0020   32    WORD voice_inverts
+
+0022   34    struct vco voice_vcos		0030  48    voice_vcos_size
+0052   82    struct vcf voice_vcfs		0010  16    voice_vcfs_size
+0062   98    struct lfo voice_lfos		0048  72    voice_lfos_size
+00AA  170    struct env voice_envs		00A8 168    voice_envs_size
+0152  338    struct mod voice_mods		0180 384    voice_mods_size
+
+02D2  722    struct mod *voice_dstptr	0084 132    voice_dstptr_size
+
+0356  854    INT voice_curval			00E0 224    voice_curval_size
+0436 1078    INT voice_outval			00E0 224    voice_outval_size
+
+0516 1302    INT voice_tunetab			0100 256    voice_tunetab_size

@@ -1,0 +1,50 @@
+OB-MX QuadPot Addressing - Rev 3 - 1993-12-02 - D.N. Lynx Crowe
+---------------------------------------------------------------
+
+								Voice A						Voice B
+								-----------------------		------------------------
+
+Reg		Pot Function			Adr Cmd		Pkg Vh Vw Vl	Adr Cmd		Pkg Vh Vw Vl
+---		---	--------------		---	---		---	--------	---	---		---	--------
+
+ 0		 1	VCO1 Offset			53H	A0H		U59	3   1  2	53H	A4H		U59	8   6  7
+
+ 1		 2	VCO1 Linearity		52H	A0H		U58	3   1  2	52H	A4H		U58	8   6  7
+
+ 2		 3	VCO2 Offset			53H	A8H		U59	11 13 12	53H	ACH		U59	17 19 18
+
+ 3		 4	VCO2 Linearity		52H	A8H		U58	11 13 12	52H	ACH		U58	17 19 18
+
+ 4		 5	VCA Leakage			50H	A0H		U52	3   1  2	51H	A0H		U53	3   1  2
+
+ 5		 6	MM Resonance		50H	ACH		U52	17 19 18	51H	ACH		U53	17 19 18
+
+ 6		 7	OB Offset			50H	A8H		U52	11 13 12	51H	A8H		U53	11 13 12
+
+ 7		 8	OB Resonance		50H	A4H		U52	8   6  7	51H	A4H		U53	8   6  7
+
+
+Where:
+------
+
+	Reg			IPC message type 6 control register number
+
+	Pot			QuadPot number		(displayed)
+	Function	Circuit function
+
+	Adr			QuadPot address
+	Cmd			QuadPot command
+
+	Pkg			Package number
+	Vh			QuadPot high pin	(addressed when wiper position = 63)
+	Vw			QuadPot wiper pin
+	Vl			QuadPot low pin		(addressed when wiper position = 0)
+
+
+
+			       Vw |
+				      |
+			Vl        v        Vh
+			  --\/\/\/\/\/\/\--
+			0                  63
+

@@ -1,0 +1,35 @@
+Release notes for OB-MX Voice PROM dated 940614
+
+-----------------------------------------------------------------------------
+
+PROM Checksum:	0x809D
+
+Start:	0x0000
+End:	0x7F84
+
+-----------------------------------------------------------------------------
+
+Reason for change:  to improve final tuning accuracy.
+
+-----------------------------------------------------------------------------
+
+Files changed:
+
+	hdw.a
+	touchup.a
+	tune.a
+	voicea.a
+
+-----------------------------------------------------------------------------
+
+Changes:
+
+Updated and added comments to further document the code.
+
+Changed timer_isr() in hdw.a to lengthen the DAC reference switching time.
+
+Changed CVs in tuner() and touchup() to eliminate VCF ringing and oscillation.
+
+Corrected scaling in calculation phase of tuner() and touchup().
+
+Disabled debug code in tune.a, touchup.a, and voicea.a modules.

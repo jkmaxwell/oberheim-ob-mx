@@ -1,0 +1,257 @@
+Assembly Language Files
+
+File:		CALC.A
+Purpose:	OB-MX miscellaneous functions
+
+	Contents:
+
+		do_mod_dst()	do modulations for a changed DST value
+		rand()			generate a 16 bit pseudo-random number
+		set_pan()		set VT_MIX_PAN from p_pan and v_pan
+		srand()			set seed for pseudo-random number generator
+
+		seed			random number generator seed
+
+File:		DOMODS.A
+Purpose:	OB-MX Modulation function
+
+	Contents:
+
+		exec_mods()		do the modulations for a voice
+		do_mods()		do the modulations
+		mod_vca()		adjust VCA for LEVEL, ENV4 and MIDI levels
+
+File:		DOSRC.A
+Purpose:	OB-MX update source value
+
+	Contents:
+
+		do_mod_src()		update a changed source value
+
+File:		ENV.A
+Purpose:	OB-MX envelope functions
+
+	Contents:
+
+		do_env()		envelope advance processing
+		init_envs()		initialize envelope data structures
+
+File:		GATE.A
+Purpose:	OB-MX gate/ungate functions
+
+	Contents:
+
+		gate_ungate1()		gate/ungate VOICE A
+		gate_ungate2()		gate/ungate VOICE B
+
+File:		HDW.A
+Purpose:	OB-MX Hardware interfaces, processor reserved memory, etc.
+
+	Contents:
+
+		background()	main loop background processing (never returns)
+		do_port			do portamento processing
+		flush_hsi()		flush the HSI FIFO
+		hdw_go()		enable interrupts
+		get_id()		get voice board pair ID
+		init_adata()	initialize RAM
+		init_hdw()		initialize hardware
+		init_regs()		initialize all register variables
+		ipc_flush()		flush the IPC buffers
+		ipc_isr_in		IPC receiver interrupt handler
+		ipc_isr_out		IPC transmitter interrupt handler
+		start_timer()	start software timer 0
+		timer_isr		software timer 0 interrupt handler
+		write_cv()		write a value to a CV
+		write_ipc()		write a byte to the IPC
+
+		no_int_badop	Unimplemented opcode
+		no_int_trap		Trap
+		no_int_vec0		Timer overflow
+		no_int_vec1		A/D conversion complete
+		no_int_vec3		HSO event
+		no_int_vec4		HSI.0 pin
+		no_int_vec6		Serial port
+		no_int_vec7		EXTINT
+		no_int_vec10	HSI 4'th entry into HSI FIFO
+		no_int_vec11	TIMER2 capture
+		no_int_vec12	TIMER2 overflow
+		no_int_vec13	EXTINT1
+		no_int_vec14	HSI FIFO full
+		no_int_vec15	NMI
+		no_int_vect		Bad interrupt handler
+
+		bflag			background timer flag
+		calref			calibration reference flag
+		diagmode		diagnostic mode flag
+		if_end			IPC FIFO tail pointer
+		if_start		IPC FIFO head pointer
+		intune			tuning in progress flag
+		ioc0_img		IOC0 image
+		ioc1_img		IOC1 image
+		ioc2_img		IOC2 image
+		ipc_byte1		IPC message byte 1
+		ipc_byte2		IPC message byte 2
+		ipc_obuf		IPC output buffer
+		noenv			skip ENV processing
+		nolfo			skip LFO processing
+		nomod			skip MOD processing
+		noprt			skip PRT processing
+		old_hso_cmd		previous HSO command
+		port2_img		IO_PORT2 image
+		r_crash			bad interrupt code
+		r_mstime		wait timer
+		sflag			skip MODs flag
+		stwat_flag		"stop the world and tune" flag
+
+File:		IPCA.A
+Purpose:	OB-MX IPC parser state machine functions
+
+	Contents:
+
+		id_req_state()		ID request parser state
+		ipc_state_0()		parser state 0
+		ipc1_state_1()		voice A parser state 1
+		ipc1_state_2()		voice A parser state 2
+		ipc2_state_1()		voice B parser state 1
+		ipc2_state_2()		voice B parser state 2
+		ipcb_state_1()		both voices parser state 1
+		ipcb_state_2()		both voices parser state 2
+
+File:		LFO.A
+Purpose:	OB-MX LFO processing
+
+	Contents:
+
+		do_lfo()	process the LFOs
+
+File:		QPOTS.A
+Purpose:	OB-MX QuadPot interface
+
+	Contents:
+
+		wqpot2()		write a 2-byte command to a quadpot
+		wqpot3()		write a 3-byte command to a quadpot
+		setpots()		set QuadPot data registers from wiper registers
+
+File:		TUNE.A
+Purpose:	OB-MX automatic tuning functions
+
+	Contents:
+
+		hsigo()			start a HSI measurement cycle
+		tuner()			tune the oscillators and filters
+
+		hsi_dav_isr		hsi data available interrupt service routine
+
+File:		VOICEA.A
+Purpose:	OB-MX IPC FIFO handling functions
+
+	Contents:
+
+		handle_ipc()		process the bytes in the IPC input FIFO
+		reset_parser()		reset IPC state machine
+
+		ipc_temp			handle_ipc -- temporary
+
+C Files
+
+File:		IPC1.C
+Purpose:	OB-MX IPC message parser -- parser utilities & voice reductions
+
+	Contents:
+
+		get_tt()			read in a tuning table from the IPC bus
+		init_ipc()			initialize IPC
+		never()				handle bogus message types
+		part_misc()			process part miscellaneous function
+		part_misc1()		process part miscellaneous function for voice A
+		part_misc2()		process part miscellaneous function for voice B
+		part_miscb()		process part miscellaneous function for both voices
+		perform_param1()	process performance parameter for voice A
+		perform_param2()	process performance parameter for voice B
+		perform_paramb()	process performance parameter for both voices
+		preset_param1()		process preset parameter for voice A
+		preset_param2()		process preset parameter for voice B
+		preset_paramb()		process performance parameter for both voices
+		set_channel1()		set channel for voice A
+		set_channel2()		set channel for voice B
+		set_transpose()		set VT_TRANSPOSE for a VOICE
+		user_mod1()			process user mod for voice A
+		user_mod2()			process user mod for voice B
+		user_modb()			process user mod for both voices
+		voice_misc()		process voice miscellaneous function
+		voice_misc1()		process voice A miscellaneous function
+		voice_misc2()		process voice B miscellaneous function
+
+		red1_tbl[]			message reduction table -- voice A
+		red2_tbl[]			message reduction table -- voice B
+		redb_tbl[]			message reduction table -- voices A & B
+		stch_tbl[]			xref CHANNEL to second state
+		stpt_tbl[]			xref PART to second state
+		stvc_tbl[]			xref VOICE to second state
+
+File:		IPC2.C
+Purpose:	OB-MX IPC message parser -- utilities and common reductions
+
+	Contents:
+
+		perform_param()		process the receipt of a performance parameter
+		preset_param()		process the receipt of a preset parameter
+		set_adj()			set the VCO ADJUST values
+		set_env()			setup ENV parameters
+		set_lfo()			setup LFO parameters
+		set_mlt()			set the multiplier for a patch
+		set_vcf()			setup VCF parameters
+		set_vco()			setup VCO parameters
+		user_mod()			process the receipt of a user modulation
+
+File:		MAIN.C
+Purpose:	OB-MX voice card root module
+
+	Contents:
+
+		main()			this is where it all begins ...
+		init_lfos()		initialize LFO data structures
+		init_misc()		initialize miscellaneous voice variables
+		init_mods()		initialize MOD data structures
+		init_tts()		initialize tuning tables
+
+File:		MODS.C
+Purpose:	OB-MX MOD structure DST list fucntions
+
+	Contents:
+
+		mod_ins()	insert a MOD structure in the DST list
+		mod_rmv()	remove a MOD structure from the DST list
+
+File:		VARS.C
+Purpose:	OB-MX variable definitions and register variable clear code
+
+	Contents:
+
+		varz()				clear assembler register and RAM variables
+
+		aoff				composite tuning offset work area A
+		boff				composite tuning offset work area B
+		ctltable[]			control register table
+		cur_cv				current CV for update
+		cur_ctl				current controller for update
+		cvtable[]			control voltage table
+		first_var			beginning of VARS.C variables
+		ipc_addr			voice or channel
+		ipc_fifo[]		 	IPC FIFO buffer area
+		ipc_stat			status byte type
+		ipc_state			next ipc state processor
+		parmap[]			preset parameter to DAC map
+		tpa					pointer to next word in A tuning table
+		tpb					pointer to next word in B tuning table
+		v[2]				voice data structures
+		vchan1				channel, voice A
+		vchan2				channel, voice B
+		vid1				voice ID, voice A
+		vid2				voice ID, voice B
+		vpart1				part, voice A
+		vpart2				part, voice B
+		wca					tuning table A word counter
+		wcb					tuning table B word counter

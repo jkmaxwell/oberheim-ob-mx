@@ -1,0 +1,537 @@
+tuner() -- tune the oscillators and filters
+
+	Prototype:
+
+		void tuner()
+
+===========================================================================
+	I N I T I A L I Z A T I O N
+===========================================================================
+
+tuner:
+
+	Preserve registers on the stack:
+
+		push:  r2, r4, r6, r8, r_e2, r_e6, r_e2me6, r_e2pe6.
+
+	Tell the rest of the world we're tuning
+	and clear r_stat & r_time for debug:
+
+		Clear hsi_isr registers:
+
+			r_stat = r_time = 0;
+
+		Indicate tuning to timer_isr:
+
+			intune = 3;
+
+		Indicate tuning to ipc code:
+
+			v[VA].tuning = v[VB].tuning = 0x80;
+
+	Setup HSI hardware for period error measurements:
+
+		Setup the HSI line modes:
+
+			HSI_MODE = 0;
+
+		Call flush_hsi() to flush the HSI FIFO.
+
+		DISABLE INTERRUPTS.
+
+		Enable the external prescaler:
+
+			HSO.1 = 0;
+
+		RESTORE INTERRUPTS.
+
+	Reset the number of tuning attempts, offsets, scale factors and errors
+	based on whether this is initial tuning or a re-tuning attempt:
+
+		For re-tuning only (retune EQ TRUE):
+
+			tunemax = TUNEMAX/2;
+
+		For initial tuning only (retune EQ FALSE):
+
+			retune = TRUE;
+			tunemax = TUNEMAX;
+
+			Reset offsets and scale factors:
+
+				a_v1_off = a_v2_off = a_mm_off = a_ob_off = 0;
+				a_v1_off = a_v2_off = a_mm_off = a_ob_off = 0;
+
+		For initial and subsequent tunings:
+
+			Reset corrections and error values:
+
+				a_v1_scly, a_v2_scly, a_mm_scly, a_ob_scly = 0;
+				a_v1_offy, a_v2_offy, a_mm_offy, a_ob_offy = 0;
+
+				b_v1_scly, b_v2_scly, b_mm_scly, b_ob_scly = 0;
+				b_v1_offy, b_v2_offy, b_mm_offy, b_ob_offy = 0;
+
+				a_v1_e2, a_v2_e2, a_mm_e2, a_ob_e2 = 0;
+				b_v1_e2, b_v2_e2, b_mm_e2, b_ob_e2 = 0;
+
+				a_v1_e6, a_v2_e6, a_mm_e6, a_ob_e6 = 0;
+				b_v1_e6, b_v2_e6, b_mm_e6, b_ob_e6 = 0;
+
+	Reset number of tuning attempts and "tuned" counters:
+
+		tunetry = 0;
+
+		a_v1_tcnt = a_v2_tcnt = a_mm_tcnt = a_ob_tcnt = 0;
+		b_v1_tcnt = b_v2_tcnt = b_mm_tcnt = b_ob_tcnt = 0;
+
+	Preserve the control voltages from cvtable[] in cvsave[].
+
+	Set the VCO waveshapes and un-sync them:
+
+		VACTL = 0x44;
+		VBCTL = 0x44;
+
+===========================================================================
+	M A I N   T U N I N G   L O O P
+
+	This begins a tuning pass, counted by tunetry.
+	We execute this loop until we are tuned, or run out of tries.
+===========================================================================
+
+try_tuning:
+
+	tuntry = tunetry + 1;		/* count a tuning pass */
+
+===========================================================================
+	V C O   T U N I N G   P H A S E
+
+	Set VCO frequencies to LOW and HIGH values and measure the errors there.
+===========================================================================
+
+	Prepare CVs for VCO measurements:
+
+		CV			Value		DAC
+		--			-----		---
+
+		MM_IN1		100			0x0FFF
+		MM_IN2		  0			0x0000
+		MM_NOISE	  0			0x0000
+		MM_RESON	  0			0x0000
+		MM_FREQ		100			0x0FFF
+
+		OB_IN1		  0			0x0000
+		OB_IN2		100			0x0FFF
+		OB_NOISE	  0			0x0000
+		OB_RESON	  0			0x0000
+		OB_FREQ		100			0x0FFF
+
+		VCO1_FM		  0			0x0000
+		VCO2_FM		  0			0x0000
+
+		VCO1_PW		 70			0x0B20
+		VCO2_PW		 70			0x0B20
+
+	DISABLE INTERRUPTS.
+
+	Set external prescaler to prescale by 1:
+
+		HSO.3 = 0;
+
+	RESTORE INTERRUPTS.
+
+	Set VCO pitches to LOW:
+
+		(LOW = 0x053A = F2+82 cents: 750KHz / 8192 = 91.55 Hz, 10.923 ms)
+
+		cvtable[A_VCO1_PITCH] = 0x053A + a_v1_off
+		cvtable[A_VCO2_PITCH] = 0x053A + a_v2_off
+		cvtable[B_VCO1_PITCH] = 0x053A + b_v1_off
+		cvtable[B_VCO2_PITCH] = 0x053A + b_v2_off
+
+		cvtable[A_VCO1_SCALE] = 0x0800 + a_v1_scl
+		cvtable[A_VCO2_SCALE] = 0x0800 + a_v2_scl
+		cvtable[B_VCO1_SCALE] = 0x0800 + b_v1_scl
+		cvtable[B_VCO2_SCALE] = 0x0800 + b_v2_scl
+
+	WAIT for VCOs to stabilize.
+
+	Start the VCO LO HSI measurement cycle.
+
+	WAIT for the VCO LO measurements to be made or a timeout to occur.
+
+	Take the VCO LO readings and store them for the calculation phase:
+
+		a_v1_e2 = hsi0_val;
+		a_v2_e2 = hsi1_val;
+		b_v1_e2 = hsi2_val;
+		b_v2_e2 = hsi3_val;
+
+	DISABLE INTERRUPTS.
+
+	Set external prescaler to prescale by 16:
+
+		HSO.3 = 1;
+
+	RESTORE INTERRUPTS.
+
+	Set VCO pitches to HIGH:
+
+		(HIGH = 0x0B3A = F6+82 cents: 750KHz / 512 = 1465 Hz, 0.6825 ms)
+
+		cvtable[A_VCO1_PITCH] = 0x0B3A + a_v1_off
+		cvtable[A_VCO2_PITCH] = 0x0B3A + a_v2_off
+		cvtable[B_VCO1_PITCH] = 0x0B3A + b_v1_off
+		cvtable[B_VCO2_PITCH] = 0x0B3A + b_v2_off
+
+		cvtable[A_VCO1_SCALE] = 0x0800 + a_v1_scl
+		cvtable[A_VCO2_SCALE] = 0x0800 + a_v2_scl
+		cvtable[B_VCO1_SCALE] = 0x0800 + b_v1_scl
+		cvtable[B_VCO2_SCALE] = 0x0800 + b_v2_scl
+
+	WAIT for VCOs to stabilize.
+
+	Start the VCO HI HSI measurement cycle.
+
+	WAIT for the VCO HI measurements to be made or a timeout to occur.
+
+	Take the VCO HI readings and store them for the calculation phase:
+
+		a_v1_e6 = hsi0_val;
+		a_v2_e6 = hsi1_val;
+		b_v1_e6 = hsi2_val;
+		b_v2_e6 = hsi3_val;
+
+===========================================================================
+	V C F   T U N I N G   P H A S E
+
+	Set VCF frequencies to LOW and HIGH values and measure the errors there.
+===========================================================================
+
+	Prepare CVs for VCF measurements:
+
+		CV			Value		DAC
+		--			-----		---
+
+		MM_IN1		  0			0x0000
+		MM_IN2		  0			0x0000
+		MM_NOISE	  0			0x0000
+		MM_RESON	100			0x0FFF
+
+		OB_IN1		  0			0x0000
+		OB_IN2		  0			0x0000
+		OB_NOISE	  0			0x0000
+		OB_RESON	100			0x0FFF
+	
+	DISABLE INTERRUPTS.
+
+	Set external prescaler to prescale by 1:
+
+		HSO.3 = 0
+
+	RESTORE INTERRUPTS.
+
+	Set VCF pitches to LOW via %setcvf:
+
+		(LOW = 0x053A = F2+82 cents: 750KHz / 8192 = 91.55 Hz, 10.923 ms)
+
+		cvtable[A_MM_FREQ] = 0x053A + a_mm_off
+		cvtable[A_OB_FREQ] = 0x053A + a_ob_off
+		cvtable[B_MM_FREQ] = 0x053A + b_mm_off
+		cvtable[B_OB_FREQ] = 0x053A + b_ob_off
+
+		cvtable[A_MM_SCALE] = 0x0800 + a_mm_scl
+		cvtable[A_OB_SCALE] = 0x0800 + a_ob_scl
+		cvtable[B_MM_SCALE] = 0x0800 + b_mm_scl
+		cvtable[B_OB_SCALE] = 0x0800 + b_ob_scl
+
+	WAIT for VCFs to stabilize.
+
+	Start the VCF LO HSI measurement cycle.
+
+	WAIT for the VCF LO measurements to be made or a timeout to occur.
+
+	Take the VCF LO readings and store them for the calculation phase:
+
+		a_mm_e2 = hsi0_val;
+		a_ob_e2 = hsi1_val;
+		b_mm_e2 = hsi2_val;
+		b_ob_e2 = hsi3_val;
+
+	DISABLE INTERRUPTS.
+
+	Set external prescaler to prescale by 16:
+
+		HSO.3 = 1;
+
+	RESTORE INTERRUPTS.
+
+	Set VCF pitches to HIGH:
+
+		(HIGH = 0x0B3A = F6+82 cents: 750KHz / 512 = 1465 Hz, 0.6825 ms)
+
+		cvtable[A_MM_FREQ] = 0x0B3A + a_mm_off
+		cvtable[A_OB_FREQ] = 0x0B3A + a_ob_off
+		cvtable[B_MM_FREQ] = 0x0B3A + b_mm_off
+		cvtable[B_OB_FREQ] = 0x0B3A + b_ob_off
+
+		cvtable[A_MM_SCALE] = 0x0800 + a_mm_scl
+		cvtable[A_OB_SCALE] = 0x0800 + a_ob_scl
+		cvtable[B_MM_SCALE] = 0x0800 + b_mm_scl
+		cvtable[B_OB_SCALE] = 0x0800 + b_ob_scl
+
+	WAIT for VCFs to stabilize.
+
+	Start the VCF HSI measurement cycle via hsi_go().
+
+	WAIT for the VCF measurements to be made or a timeout to occur.
+
+	Take the VCF HI readings and store them for the calculation phase:
+
+		a_mm_e6 = hsi0_val;
+		a_ob_e6 = hsi1_val;
+		b_mm_e6 = hsi2_val;
+		b_ob_e6 = hsi3_val;
+
+===========================================================================
+	C A L C U L A T I O N   P H A S E
+===========================================================================
+
+	Calculate offset corrections (offy) and scale factor corrections (scly):
+
+		a_v1_offy = - (((a_v1_e2/2) + (a_v1_e6/2)) * cfoff);
+		a_v1_scly =   (((a_v1_e2/2) - (a_v1_e6/2)) * cfscl);
+
+		a_v2_offy = - (((a_v2_e2/2) + (a_v2_e6/2)) * cfoff);
+		a_v2_scly =   (((a_v2_e2/2) - (a_v2_e6/2)) * cfscl);
+
+		b_v1_offy = - (((b_v1_e2/2) + (b_v1_e6/2)) * cfoff);
+		b_v1_scly =   (((b_v1_e2/2) - (b_v1_e6/2)) * cfscl);
+
+		b_v2_offy = - (((b_v2_e2/2) + (b_v2_e6/2)) * cfoff);
+		b_v2_scly =   (((b_v2_e2/2) - (b_v2_e6/2)) * cfscl);
+
+		a_mm_offy = - (((a_mm_e2/2) + (a_mm_e6/2)) * cfoff);
+		a_mm_scly =   (((a_mm_e2/2) - (a_mm_e6/2)) * cfscl);
+
+		a_ob_offy = - (((a_ob_e2/2) + (a_ob_e6/2)) * cfoff);
+		a_ob_scly =   (((a_ob_e2/2) - (a_ob_e6/2)) * cfscl);
+
+		b_mm_offy = - (((b_mm_e2/2) + (b_mm_e6/2)) * cfoff);
+		b_mm_scly =   (((b_mm_e2/2) - (b_mm_e6/2)) * cfscl);
+
+		b_ob_offy = - (((b_ob_e2/2) + (b_ob_e6/2)) * cfoff);
+		b_ob_scly =   (((b_ob_e2/2) - (b_ob_e6/2)) * cfscl);
+
+
+===========================================================================
+	T U N I N G   C H E C K   P H A S E
+
+	See if we're tuned, and try again until we are,
+	or we're tired of trying.
+===========================================================================
+
+	Using %check, update voice A composite tuning status:
+
+		r_tstat = v[VA].tuning;
+
+		for x = a_v1, a_v2, a_mm, a_ob:
+
+			if (0 EQ (r_tstat & BITn)) {			/* if NOT tuned ... */
+
+				if (x_offy EQ 0) {					/* if x_offy EQ 0 ... */
+
+					if ((r_test = x_scly) < 0)		/* r_test = abs(x_scly) */
+						r_test = -r_test;
+
+					if (r_test LE 4) {				/* if abs(x_scly) LE 4 ... */
+
+						++x_tcnt;					/* increment tuned count */
+
+						if (x_tcnt EQ 2)			/* if tuned enough ... */
+							r_tstat |= BITn;		/* ... indicate tuned */
+
+					} else {
+
+						x_tcnt = 0;					/* clear tuned count */
+					}
+
+				} else {
+
+					x_tcnt = 0;						/* clear tuned count */
+				}
+			}
+
+		v[VA].tuning = r_tstat;
+
+	Using %check, update voice B composite tuning status:
+
+		r_tstat = v[VB].tuning;
+
+		for x = b_v1, b_v2, b_mm. b_ob:
+
+			if (0 EQ (r_tstat & BITn)) {			/* if NOT tuned ... */
+
+				if (x_offy EQ 0) {					/* if x_offy EQ 0 ... */
+
+					if ((r_test = x_scly) < 0)		/* r_test = abs(x_scly) */
+						r_test = -r_test;
+
+					if (r_test LE 4) {				/* if abs(x_scly) LE 4 ... */
+
+						++x_tcnt;					/* increment tuned count */
+
+						if (x_tcnt EQ 2)			/* if tuned enough ... */
+							r_tstat |= BITn;		/* ... indicate tuned */
+
+					} else {
+
+						x_tcnt = 0;					/* clear tuned count */
+					}
+
+				} else {
+
+					x_tcnt = 0;						/* clear tuned count */
+				}
+			}
+	
+		v[VB].tuning = r_tstat;
+
+	Check composite tuning status for both voices
+	and decide whether to retune:
+
+		if ((v[VA].tuning EQ 0x8F) AND (v[VB].tuning EQ 0x8F))
+			goto tuning_done;
+		else
+			goto not_tuned;
+
+===========================================================================
+	A D J U S T M E N T   P H A S E
+	Adjust offsets (_off) and scale factors (_scl) for things not yet tuned.
+===========================================================================
+
+not_tuned:
+
+	See if we re-tune or quit tuning:
+
+		if (tunetry GT tunemax)
+			goto tuning_done;
+
+	Adjust offsets (_off) and scale factors (_scl):
+
+		adjust offsets:
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_v1_off += a_v1_offy;		/* ... adjust offset */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_v2_off += a_v2_offy;		/* ... adjust offset */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_mm_off += a_mm_offy;		/* ... adjust offset */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_ob_off += a_ob_offy;		/* ... adjust offset */
+
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_v1_off += b_v1_offy;		/* ... adjust offset */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_v2_off += b_v2_offy;		/* ... adjust offset */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_mm_off += b_mm_offy;		/* ... adjust offset */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_ob_off += b_ob_offy;		/* ... adjust offset */
+
+		adjust scale factors:
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_v1_scl += a_v1_scly;		/* ... adjust scale factor */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_v2_scl += a_v2_scly;		/* ... adjust scale factor */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_mm_scl += a_mm_scly;		/* ... adjust scale factor */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				a_ob_scl +=a_ob_scly;		/* ... adjust scale factor */
+
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_v1_scl += b_v1_scly;		/* ... adjust scale factor */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_v2_scl += b_v2_scly;		/* ... adjust scale factor */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_mm_scl += b_mm_scly;		/* ... adjust scale factor */
+
+			if (0 EQ (r_tstat & BITn))		/* if not tuned ... */
+				b_ob_scl += b_ob_scly;		/* ... adjust scale factor */
+
+tuning_done:
+
+	Update final tuning status for both voices:
+
+		v[VA].tuning &= 0x7F;
+		v[VB].tuning &= 0x7F;
+
+===========================================================================
+	T E R M I N A T I O N
+
+	Output final scalings and restore the machine state.
+===========================================================================
+
+	DISABLE INTERRUPTS.
+
+	Disable HSI.0 .. HSI.3:
+
+		IOC0 = ioc0_img = 0x0AA;
+
+	Disable external prescaler:
+
+		HSO.1 = 1;
+
+	RESTORE INTERRUPTS.
+
+	Setup tune_save[0..15] from tune_vars[0..15].
+
+	Call ipc_wait() to hang out until IPC is active.
+
+	Enable SDA output on HSO.5:
+
+		IOC1.6 = 1;
+
+	Restore voice A osc controls.
+
+	Restore voice B osc controls.
+
+	Restore cvtable[] from cvsave[].
+
+	Fixup cvtable[] entries for scale factors:
+
+		cvtabl[A_VCO1_SCALE]	= 0x0800 + a_v1_scl;
+		cvtabl[A_VCO2_SCALE]	= 0x0800 + a_v2_scl;
+		cvtabl[A_MM_SCALE]		= 0x0800 + a_mm_scl;
+		cvtabl[A_OB_SCALE]		= 0x0800 + a_ob_scl;
+
+		cvtabl[B_VCO1_SCALE]	= 0x0800 + b_v1_scl;
+		cvtabl[B_VCO2_SCALE]	= 0x0800 + b_v2_scl;
+		cvtabl[B_MM_SCALE]		= 0x0800 + b_mm_scl;
+		cvtabl[B_OB_SCALE]		= 0x0800 + b_ob_scl;
+
+	Reset VCO ADJUST values via set_adj().
+
+	Ret intune = 0 to indicate "done tuning" to timer_isr.
+
+	Restore the registers from the stack:
+
+		pop:  r_e2pe6, r_e2me6, r_e6, r_e2, r8, r6, r4, r2.
+
+	Return to caller.
+
+/* The End */

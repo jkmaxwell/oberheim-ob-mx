@@ -1,0 +1,58 @@
+OB-MX Voice Card Segment Definitions
+
+aseg	0-19		SFR
+
+				80C198 Special Function Registers
+
+aseg	1A-23		REG
+
+				
+(DATA)	24-E8		REG
+
+	aregs		Assembler register variables
+
+(CODE)	0100-1FFE	ROM
+
+	ZVECT		Unused (for initializing C variables at startup)
+	CSTR		Unused (for initializing C variables at startup)
+
+	CONST		Initialized C const variables
+	CDATA		Used for initializing C variables in IDATA at startup
+
+	CCSTR		Unused (for initializing C variables at startup)
+
+	RCODE		Run-time support code called by the C code generator
+
+aseg	2000-2013	ROM
+
+				Low interrupt vectors
+
+aseg	2018-2019	ROM
+
+				Chip Configuration Byte
+
+aseg	2030-203F	ROM
+
+				High interrupt vectors
+
+(CODE)	2080-7FFF	ROM
+
+	CSTART		Used by CSTARTUP.S15
+	acode		Assembler code
+	CODE		C library routines and compiled C functions
+
+(DATA)	=8000-EFFE	RAM
+
+	DATA		Used for uninitialized static C variables
+	IDATA		Used for initialized C variables
+	UDATA		Used for initializing zeroed C variables at startup
+
+	ECSTR		Unused (for initializing C variables at startup)
+	WCSTR		Unused (for initializing C variables at startup)
+
+	TEMP		Used for register temporaries by the C code generator
+	adata		Assembler data
+
+(DATA)	=F000-FCFE	RAM
+
+	CSTACK		Stack segment space

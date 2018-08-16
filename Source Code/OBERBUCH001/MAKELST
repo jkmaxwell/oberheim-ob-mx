@@ -1,0 +1,130 @@
+# File:		makelst
+# Purpose:	make file for OB-MX voice card -- aomf output, with listings
+# Original:		1993-07-08	D.N. Lynx Crowe
+# Revision:	21	1994-05-17	D.N. Lynx Crowe
+
+# References:	VOICEB.XCL
+#				*.h
+#				*.inc
+#				afiles\*.a
+#				cfiles\*.c
+
+# Creates:		VOICE.OUT
+#				VOICE.LST
+#				obj\*.r15
+#				obj\*.lst
+
+##### paths
+
+CC =	d:\arch96\c-96 
+ASM =	d:\arch96\a8096 
+XLINK =	d:\arch96\xlink 
+
+ASRC =	afiles
+CSRC =	cfiles
+
+##### compiler options
+
+CDPTS = -P -v1 -e -s20,234 -O$(OBJ)\  
+
+##### assembler options
+
+ADPTS = 
+
+##### compiler global includes
+
+CINCL = voice.h vars.h
+
+##### assembler global includes
+
+AINCL = reg8096.inc stdmac.inc voice.inc tuner.inc tunecvs.inc
+
+OBJ = obj
+
+MODS =	$(OBJ)\calc.r15 \
+	$(OBJ)\domods.r15 \
+	$(OBJ)\dosrc.r15 \
+	$(OBJ)\env.r15 \
+	$(OBJ)\gate.r15 \
+	$(OBJ)\hdw.r15 \
+	$(OBJ)\ipca.r15 \
+ 	$(OBJ)\lfo.r15 \
+ 	$(OBJ)\qpots.r15 \
+ 	$(OBJ)\touchup.r15 \
+ 	$(OBJ)\tune.r15 \
+	$(OBJ)\voicea.r15 \
+	$(OBJ)\ipc1.r15 \
+	$(OBJ)\ipc2.r15 \
+ 	$(OBJ)\main.r15 \
+	$(OBJ)\mods.r15 \
+	$(OBJ)\tables1.r15 \
+	$(OBJ)\tables2.r15 \
+	$(OBJ)\tables3.r15 \
+	$(OBJ)\vars.r15
+
+voiceb.xtk: $(MODS) voiceb.xcl
+	$(XLINK) -f voiceb
+
+##### AFILES
+
+$(OBJ)\calc.r15: $(ASRC)\calc.a $(AINCL)
+	$(ASM)  $(ASRC)\calc.a,$(OBJ)\calc.lst,$(OBJ)\calc.r15 $(ADPTS)
+
+$(OBJ)\domods.r15: $(ASRC)\domods.a $(AINCL)
+	$(ASM)  $(ASRC)\domods.a,$(OBJ)\domods.lst,$(OBJ)\domods.r15 $(ADPTS)
+
+$(OBJ)\dosrc.r15: $(ASRC)\dosrc.a $(AINCL)
+	$(ASM)  $(ASRC)\dosrc.a,$(OBJ)\dosrc.lst,$(OBJ)\dosrc.r15 $(ADPTS)
+
+$(OBJ)\env.r15: $(ASRC)\env.a $(AINCL)
+	$(ASM)  $(ASRC)\env.a,$(OBJ)\env.lst,$(OBJ)\env.r15 $(ADPTS)
+
+$(OBJ)\gate.r15: $(ASRC)\gate.a $(AINCL)
+	$(ASM)  $(ASRC)\gate.a,$(OBJ)\gate.lst,$(OBJ)\gate.r15 $(ADPTS)
+
+$(OBJ)\hdw.r15: $(ASRC)\hdw.a $(AINCL)
+	$(ASM)  $(ASRC)\hdw.a,$(OBJ)\hdw.lst,$(OBJ)\hdw.r15 $(ADPTS)
+
+$(OBJ)\ipca.r15: $(ASRC)\ipca.a $(AINCL)
+	$(ASM)  $(ASRC)\ipca.a,$(OBJ)\ipca.lst,$(OBJ)\ipca.r15 $(ADPTS)
+
+$(OBJ)\lfo.r15: $(ASRC)\lfo.a $(AINCL)
+	$(ASM)  $(ASRC)\lfo.a,$(OBJ)\lfo.lst,$(OBJ)\lfo.r15 $(ADPTS)
+
+$(OBJ)\qpots.r15: $(ASRC)\qpots.a $(AINCL)
+	$(ASM)  $(ASRC)\qpots.a,$(OBJ)\qpots.lst,$(OBJ)\qpots.r15 $(ADPTS)
+
+$(OBJ)\touchup.r15: $(ASRC)\touchup.a $(AINCL)
+	$(ASM)  $(ASRC)\touchup.a,$(OBJ)\touchup.lst,$(OBJ)\touchup.r15 $(ADPTS)
+
+$(OBJ)\tune.r15: $(ASRC)\tune.a $(AINCL)
+	$(ASM)  $(ASRC)\tune.a,$(OBJ)\tune.lst,$(OBJ)\tune.r15 $(ADPTS)
+
+$(OBJ)\voicea.r15: $(ASRC)\voicea.a $(AINCL)
+	$(ASM)  $(ASRC)\voicea.a,$(OBJ)\voicea.lst,$(OBJ)\voicea.r15 $(ADPTS)
+
+##### CFILES
+
+$(OBJ)\ipc1.r15: $(CSRC)\ipc1.c $(CINCL)
+	$(CC)  $(CSRC)\ipc1.c $(CDPTS)
+
+$(OBJ)\ipc2.r15: $(CSRC)\ipc2.c $(CINCL)
+	$(CC)  $(CSRC)\ipc2.c $(CDPTS)
+
+$(OBJ)\main.r15: $(CSRC)\main.c $(CINCL)
+	$(CC)  $(CSRC)\main.c $(CDPTS)
+
+$(OBJ)\mods.r15: $(CSRC)\mods.c $(CINCL)
+	$(CC)  $(CSRC)\mods.c $(CDPTS)
+
+$(OBJ)\tables1.r15: $(CSRC)\tables1.c $(CINCL)
+	$(CC)  $(CSRC)\tables1.c $(CDPTS)
+
+$(OBJ)\tables2.r15: $(CSRC)\tables2.c $(CINCL)
+	$(CC)  $(CSRC)\tables2.c $(CDPTS)
+
+$(OBJ)\tables3.r15: $(CSRC)\tables3.c $(CINCL)
+	$(CC)  $(CSRC)\tables3.c $(CDPTS)
+
+$(OBJ)\vars.r15: $(CSRC)\vars.c $(CINCL)
+	$(CC)  $(CSRC)\vars.c $(CDPTS)

@@ -1,0 +1,188 @@
+ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+ºOB-MX Modulations                                 º
+ºmods.doc -- Rev 1 -- 1993-10-06 -- D.N. Lynx Croweº
+ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Fixed ModulationsÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+Index	IPC parameter	Source		Destination			Function
+ÄÄÄÄÄ	ÄÄÄÄÄÄÄÄÄÄÄÄÄ	ÄÄÄÄÄÄ		ÄÄÄÄÄÄÄÄÄÄÄ			ÄÄÄÄÄÄÄÄ
+
+[ 0]	VCO1_LFO1FM		PP_LFO1		UM_VCO1_PITCH		LFO1 -> VCO1 Pitch
+[ 1]	VCO1_ENV1FM		PP_ENV1		UM_VCO1_PITCH		ENV1 -> VCO1 Pitch
+
+[ 2]	VCO2_LFO1FM		PP_LFO1		UM_VCO2_PITCH		LFO1 -> VCO2 Pitch
+[ 3]	VCO2_ENV1FM		PP_ENV1		UM_VCO2_PITCH		ENV1 -> VCO2 Pitch
+
+[ 4]	VCO1_PWM		PP_LFO2		UM_VCO1_PWIDTH		LFO2 -> VCO1 Pulse Width
+[ 5]	VCO1_PWM		PP_ENV2		UM_VCO1_PWIDTH		ENV2 -> VCO1 Pulse Width
+
+[ 6]	VCO2_PWM		PP_LFO2		UM_VCO2_PWIDTH		LFO2 -> VCO2 Pulse Width
+[ 7]	VCO2_PWM		PP_ENV2		UM_VCO2_PWIDTH		ENV2 -> VCO2 Pulse Width
+
+[ 8]	MM_LFO1FM		PP_LFO1		UM_MM_FREQ			LFO1 -> MM Frequency
+[ 9]	MM_ENV1FM		PP_ENV1		UM_MM_FREQ			ENV1 -> MM Frequency
+
+[10]	OB_LFO2FM		PP_LFO2		UM_OB_FREQ			LFO2 -> OB Frequency
+[11]	OB_ENV2FM		PP_ENV2		UM_OB_FREQ			ENV2 -> OB Frequency
+
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Fixed Modulation TargetsÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+Destination		Value Table Entry	Function
+ÄÄÄÄÄÄÄÄÄÄÄ		ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ	ÄÄÄÄÄÄÄÄ
+
+UM_VCO1_PITCH	VT_VCO1_CNOTE		VCO1 Pitch
+UM_VCO2_PITCH	VT_VCO2_CNOTE		VCO2 Pitch
+
+UM_VCO1_PWIDTH	VT_VCO1_PWIDTH		VCO1 Pulse Width
+UM_VCO2_PWIDTH	VT_VCO2_PWIDTH		VCO2 Pulse Width
+
+UM_MM_FREQ		VT_MM_FREQ			MM Frequency
+UM_OB_FREQ		VT_OB_FREQ			OB Frequency
+
+
+ÚÄÄÄÄÄ¿
+³NotesÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ÀÄÄÄÄÄÙ
+
+Multipliers in the range 0..127 are converted to +/- 0x4000.
+
+Values are in the range +/- 0x7FFF.
+
+Values which don't go to a CV get sent to one of the unused DAC outputs
+that has no S/H chip associated with it.
+
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³MOD definitionsÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+struct mod {			Modulation (MOD) structure definition
+
+			ÉÍÍÍÍÍÍÍÍÍÍÍ»
+	[ 0]	º flg       º	WORD		flg;	flag word
+			ÌÍÍÍÍÍËÍÍÍÍÍ¼
+	[ 2]	º src º			BYTE		src;	source (SRC) index
+			ÌÍÍÍÍÍ¹
+	[ 3]	º dst º			BYTE		dst;	destination (DST) index
+			ÌÍÍÍÍÍÊÍÍÍÍÍ»
+	[ 4]	º mlt       º	INT			mlt;	multiplier
+			ÌÍÍÍÍÍÍÍÍÍÍÍ¹
+	[ 6]	º srp       º	INT			*srp;	&vp->outval[src]
+			ÌÍÍÍÍÍÍÍÍÍÍÍ¹
+	[ 8]	º dsp       º	INT			*dsp;	&vp->outval[dst]
+			ÌÍÍÍÍÍÍÍÍÍÍÍ¹
+	[10]	º cvp       º	INT			*cvp;	&vp->curval[dst]
+			ÌÍÍÍÍÍÍÍÍÍÍÍ¹
+	[12]	º dac       º	WORD		*dac;	&cvtable[mapped_dst]
+			ÌÍÍÍÍÍÍÍÍÍÍÍ¹
+	[14]	º nxd       º	struct mod	*nxd;	next destination (DST) pointer
+			ÈÍÍÍÍÍÍÍÍÍÍÍ¼
+};
+
+
+Flag Bits in flg:
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	MOD_F_NXD	0x0001	on DST list
+
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Modulation structures in the VOICE data structureÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+	struct mod mods[N_MODS];		MODs (IMPORTANT: fixed 1st, then user)
+
+	struct mod *dstptr[N_DSTS];		VOICE MOD destination (DST) pointers
+
+
+		Number of fixed MODs	N_FMODS		12
+		Number of user MODs		N_UMODS		12
+
+		Total number of MODs	N_MODS		24
+
+ÉÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ»
+º IMPORTANT:  Fixed MODs MUST preceed User MODs in the mods[] table. º
+º Many functions depend heavily on this ...                          º
+ÈÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍÍ¼
+
+ÚÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ¿
+³Modulation Support FunctionsÃÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+ÀÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÙ
+
+set_mlt() -- set the multiplier for a patch
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	Usage:
+
+		void set_mlt(vp, ind, val, tbl)
+
+	Where:
+
+		struct voice *vp;	VOICE pointer
+		WORD ind;			MOD index
+		WORD val;			multiplier  (0..127)
+		INT *tbl;			multiplier table pointer
+
+
+mod_ins() -- insert a MOD structure in the DST list
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	Usage:
+
+		void mod_ins(vp, mp)
+
+	Where:
+
+		struct voice *vp;	VOICE pointer
+		struct mod *mp;		MOD pointer
+
+
+mod_rmv() -- remove a MOD structure from the DST list
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	Usage:
+
+		void mod_rmv(vp, mp)
+
+	Where:
+
+		struct voice *vp;	VOICE pointer
+		struct mod *mp;		MOD pointer
+
+do_mod_src() -- do modulations for a changed source value
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	Usage:
+
+		void do_mod_src(vp, ns, val)
+
+	Where:
+
+		struct voice *vp;	VOICE pointer
+		WORD ns;			performance parameter (VT) number
+		WORD val;			initial (current) value  (0..0x7FFF)
+
+do_mod_dst() -- do modulations for a changed destination value
+ÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄÄ
+
+	Usage:
+
+		INT do_mod_dst(vp, par, val)
+
+	Where:
+
+		struct voice *vp;	VOICE pointer
+		BYTE par;			preset parameter number
+		WORD val;			initial (current) value  (0..0x7FFF)
+
+	Returns:
+
+		modulated (output) value -- also in: outval[par_val[par]]
+

@@ -1,0 +1,1262 @@
+/*	ddl			-- dump registers for do_lfos()							*/
+/*	dkva		-- display voice A keyboard variables					*/
+/*	dkvb		-- display voice B keyboard variables					*/
+/*	ddst(vb)	-- dump DST list heads									*/
+/*	dctl		-- dump control table									*/
+/*	dtr			-- display tuning registers								*/
+/*	denvp(vb, n)	-- dump env pointers								*/
+/*	dhl(s)		-- display hsi log segment								*/
+/*	dmod(vb, n)		-- dump a mod struct								*/
+/*	dtc			-- display tuning counters								*/
+/*	dks			-- display keyboard status								*/
+/*	dde			-- dump registers for do_env()							*/
+/*	ddm			-- dump registers for do_mods()							*/
+/*	dtt(vb)		-- dump tuning table									*/
+/*	 dtts		-- dump tuning tables for both voices					*/
+/*	dca			-- dump channel assignments								*/
+/*	dpa			-- display part assignments								*/
+/*	dva			-- display voice assignments							*/
+/*	dfm(vb)		-- dump fixed modulations								*/
+/*	dum(vb)		-- dump user modulations								*/
+/*	 dfuma		-- dump fixed and user modulations for voice A			*/
+/*	 dfumb		-- dump fixed and user modulations for voice B			*/
+/*	denv(vb, n) -- dump a env struct									*/
+/*	dvcf(vb, n)	-- dump a vcf struct									*/
+/*	dlfo(vb, n)	-- dump a lfo struct									*/
+/*	dasg		-- dump voice assignments								*/
+/*	dst			-- display ipc state									*/
+/*	dmm(vb)		-- dump modifiable multipliers							*/
+/*	dport(vb)	-- display portamento variables							*/
+/*	denv(vb, n) -- dump a env struct									*/
+/*	dxfa		-- display VCF tuning xy values for voice A				*/
+/*	dxfb		-- display VCF tuning xy values for voice B				*/
+/*	dvco(vb, n)	-- dump a vco struct									*/
+/*	dvcos(vb)	-- dump VCO structs for a voice							*/
+
+/* ************************************************ */
+/*+ **** ddl -- dump registers for do_lfos()  ***** */
+/* ************************************************ */
+
+def proc ddl = nosource do
+write using ('"r_temp2 ",>')
+dword .lfo_regs
+write using ('"r_temp1 ",>')
+word .lfo_regs+4t
+write using ('"r_temp3 ",>')
+word .lfo_regs+6t
+write using ('"r_vp    ",>')
+word .lfo_regs+8t
+write using ('"r_lp    ",>')
+word .lfo_regs+10t
+write using ('"r_t1    ",>')
+word .lfo_regs+12t
+end
+
+/* ***************************************************** */
+/*+ **** dkva - display voice A keyboard variables ***** */
+/* ***************************************************** */
+
+def proc dkva = nosource do
+write 'Voice A'
+write using ('"WORD gu_flag = ",>')
+word .gu_flag
+write using ('"BYTE vtrig   = ",>')
+byte .v+1
+write using ('"BYTE vgate   = ",>')
+byte .v+2
+write using ('"BYTE pedal   = ",>')
+byte .v+3
+write using ('"BYTE legato  = ",>')
+byte .v+4
+write using ('"BYTE port    = ",>')
+byte .v+5
+write using ('"WORD note    = ",>')
+word .v+6
+write using ('"WORD vel     = ",>')
+word .v+8
+end
+
+/* ***************************************************** */
+/*+ **** dkvb - display voice B keyboard variables ***** */
+/* ***************************************************** */
+
+def proc dkvb = nosource do
+write 'Voice B'
+write using ('"WORD gu_flag = ",>')
+word .gu_flag
+write using ('"BYTE vtrig   = ",>')
+byte .v+1+v_len
+write using ('"BYTE vgate   = ",>')
+byte .v+2+v_len
+write using ('"BYTE pedal   = ",>')
+byte .v+3+v_len
+write using ('"BYTE legato  = ",>')
+byte .v+4+v_len
+write using ('"BYTE port    = ",>')
+byte .v+5+v_len
+write using ('"WORD note    = ",>')
+word .v+6+v_len
+write using ('"WORD vel     = ",>')
+word .v+8+v_len
+end
+
+/* ******************************************* */
+/*+ **** ddst(vb) -- dump DST list heads ***** */
+/* ******************************************* */
+
+def proc ddst = nosource do
+def word dst_base = .v+(%0*v_len)+dst_off
+write using ('"[ 0..9 ]  ",>')
+word dst_base len 10t
+write using ('"[10..19]  ",>')
+word dst_base+20t len 10t
+write using ('"[20..29]  ",>')
+word dst_base+40t len 10t
+write using ('"[30..39]  ",>')
+word dst_base+60t len 10t
+write using ('"[40..49]  ",>')
+word dst_base+80t len 10t
+write using ('"[50..59]  ",>')
+word dst_base+100t len 10t
+write using ('"[60..63]  ",>')
+word dst_base+120t len 4t
+end
+
+/* ************************************** */
+/*+ **** dctl -- dump control table ***** */
+/* ************************************** */
+
+def proc dctl = nosource do
+write using ('"***** ctltable[0..15] *****"')
+byte .ctltable length 16t
+end
+
+/* ******************************************* */
+/*+ **** dtr -- display tuning registers ***** */
+/* ******************************************* */
+
+def proc dtr = nosource do
+def word oldbase = base
+write using ('"hsi0_val  = ",>')
+word .hsi0_val
+write using ('"hsi1_val  = ",>')
+word .hsi1_val
+write using ('"hsi2_val  = ",>')
+word .hsi2_val
+write using ('"hsi3_val  = ",>')
+word .hsi3_val
+write ''
+write using ('"hsi0_last = ",>')
+word .ti_regs+6t
+write using ('"hsi1_last = ",>')
+word .ti_regs+8t
+write using ('"hsi2_last = ",>')
+word .ti_regs+10t
+write using ('"hsi3_last = ",>')
+word .ti_regs+12t
+write ''
+write using ('"r_stat    = ",>')
+base = binary
+byte .ti_regs+14t
+base = oldbase
+write using ('"r_time    = ",>')
+word .ti_regs+16t
+write using ('"r_temp    = ",>')
+word .ti_regs+18t
+end
+
+/* ********************************************* */
+/*+ **** denvp(vb, n) -- dump env pointers ***** */
+/* ********************************************* */
+
+def proc denvp = nosource do
+def word env_base = .v+(%0*v_len)+env_off+(%1*env_len)
+write using ('"+20 WORD *p_vcur     = ",>')
+word env_base+20t
+write using ('"+22 WORD *p_vout     = ",>')
+word env_base+22t
+write using ('"+24 WORD *p_attack   = ",>')
+word env_base+24t
+write using ('"+26 WORD *p_atck_del = ",>')
+word env_base+26t
+write using ('"+28 WORD *p_decay    = ",>')
+word env_base+28t
+write using ('"+30 WORD *p_dcay_del = ",>')
+word env_base+30t
+write using ('"+32 WORD *p_sustain  = ",>')
+word env_base+32t
+write using ('"+34 WORD *p_sus_dcay = ",>')
+word env_base+34t
+write using ('"+36 WORD *p_release  = ",>')
+word env_base+36t
+write using ('"+38 WORD *p_ped_rels = ",>')
+word env_base+38t
+end
+
+/* ********************************************* */
+/*+ **** dhl(s) -- display hsi log segment ***** */
+/* ********************************************* */
+
+def proc dhl = nosource do
+def word hl_len = 11t
+def word h_base = .hsilog+(%0*(16t*hl_len*2t))
+write 'HSI LOG  ttph stat time h0l  h0v  h1l  h1v  h2l  h2v  h3l  h3v '
+word h_base+( 0t*hl_len*2t) len hl_len
+word h_base+( 1t*hl_len*2t) len hl_len
+word h_base+( 2t*hl_len*2t) len hl_len
+word h_base+( 3t*hl_len*2t) len hl_len
+word h_base+( 4t*hl_len*2t) len hl_len
+word h_base+( 5t*hl_len*2t) len hl_len
+word h_base+( 6t*hl_len*2t) len hl_len
+word h_base+( 7t*hl_len*2t) len hl_len
+word h_base+( 8t*hl_len*2t) len hl_len
+word h_base+( 9t*hl_len*2t) len hl_len
+word h_base+(10t*hl_len*2t) len hl_len
+word h_base+(11t*hl_len*2t) len hl_len
+word h_base+(12t*hl_len*2t) len hl_len
+word h_base+(13t*hl_len*2t) len hl_len
+word h_base+(14t*hl_len*2t) len hl_len
+word h_base+(15t*hl_len*2t) len hl_len
+end
+
+/* ******************************************* */
+/*+ **** dmod(vb, n) -- dump a mod struct **** */
+/* ******************************************* */
+
+def proc dmod = nosource do
+def word mod_base = .v+(%0*v_len)+mod_off+(%1*mod_len)
+write using ('"+ 0 WORD flg  = ",>')
+word mod_base
+write using ('"+ 2 BYTE src  = ",>')
+byte mod_base+2t
+write using ('"+ 3 BYTE dst  = ",>')
+byte mod_base+3t
+write using ('"+ 4 INT  mlt  = ",>')
+word mod_base+4t
+write using ('"+ 6 ADDR srp  = ",>')
+word mod_base+6t
+write using ('"+ 8 ADDR dsp  = ",>')
+word mod_base+8t
+write using ('"+10 ADDR cvp  = ",>')
+word mod_base+10t
+write using ('"+12 ADDR dac  = ",>')
+word mod_base+12t
+write using ('"+14 ADDR nxd  = ",>')
+word mod_base+14t
+end
+
+/* ***************************************** */
+/*+ **** dtc - display tuning counters ***** */
+/* ***************************************** */
+
+def proc dtc = nosource do
+write using ('"BYTE VA.tuning = ",>')
+byte .v+16t
+write using ('"BYTE VB.tuning = ",>')
+byte .v+v_len+16t
+write ''
+write using ('"WORD tunemax   = ",>')
+word .tunemax
+write using ('"WORD tunetry   = ",>')
+word .tunetry
+write using ('"WORD retune    = ",>')
+word .retune
+write ''
+write using ('"WORD a_v1_tcnt = ",>')
+word .a_v1_tcnt
+write using ('"WORD a_v2_tcnt = ",>')
+word .a_v2_tcnt
+write using ('"WORD a_mm_tcnt = ",>')
+word .a_mm_tcnt
+write using ('"WORD a_ob_tcnt = ",>')
+word .a_ob_tcnt
+write ''
+write using ('"WORD b_v1_tcnt = ",>')
+word .b_v1_tcnt
+write using ('"WORD b_v2_tcnt = ",>')
+word .b_v2_tcnt
+write using ('"WORD b_mm_tcnt = ",>')
+word .b_mm_tcnt
+write using ('"WORD b_ob_tcnt = ",>')
+word .b_ob_tcnt
+end
+
+/* **************************************** */
+/*+ **** dks - display keyboard status **** */
+/* **************************************** */
+
+if listem then
+write '   dks'
+endif
+
+def proc dks = nosource do
+write using ('"A BYTE vtrig   = ",>')
+byte .v
+write using ('"A BYTE vgate   = ",>')
+byte .v+1t
+write using ('"A BYTE pedal   = ",>')
+byte .v+4t
+write using ('"A BYTE legato  = ",>')
+byte .v+2t
+write using ('"A BYTE port    = ",>')
+byte .v+3t
+write using ('"A WORD vel     = ",>')
+word .v+6t
+write using ('"A WORD note    = ",>')
+word .v+8t
+write using ('"A WORD note1   = ",>')
+word .v+10t
+write using ('"A WORD note2   = ",>')
+word .v+12t
+write using ('"B BYTE vtrig   = ",>')
+byte .v+v_len
+write using ('"B BYTE vgate   = ",>')
+byte .v+1t+v_len
+write using ('"B BYTE pedal   = ",>')
+byte .v+4t+v_len
+write using ('"B BYTE legato  = ",>')
+byte .v+2t+v_len
+write using ('"B BYTE port    = ",>')
+byte .v+3t+v_len
+write using ('"B WORD vel     = ",>')
+word .v+6t+v_len
+write using ('"B WORD note    = ",>')
+word .v+8t+v_len
+write using ('"B WORD note1   = ",>')
+word .v+10t+v_len
+write using ('"B WORD note2   = ",>')
+word .v+12t+v_len
+end
+
+/* ***************************************** */
+/*+ **** dta -- display voice A tunings **** */
+/* ***************************************** */
+
+if listem then
+write '   dta'
+endif
+
+def proc dta = nosource do
+write using ('"BYTE VA.tuning = ",>')
+byte .v+5t
+write using ('"WORD a_v1_off  = ",>')
+word .a_v1_off
+write using ('"WORD a_v1_offy = ",>')
+word .a_v1_offy
+write using ('"WORD a_v1_scl  = ",>')
+word .a_v1_scl
+write using ('"WORD a_v1_scly = ",>')
+word .a_v1_scly
+write using ('"WORD a_v2_off  = ",>')
+word .a_v2_off
+write using ('"WORD a_v2_offy = ",>')
+word .a_v2_offy
+write using ('"WORD a_v2_scl  = ",>')
+word .a_v2_scl
+write using ('"WORD a_v2_scly = ",>')
+word .a_v2_scly
+write using ('"WORD a_mm_off  = ",>')
+word .a_mm_off
+write using ('"WORD a_mm_offy = ",>')
+word .a_mm_offy
+write using ('"WORD a_mm_scl  = ",>')
+word .a_mm_scl
+write using ('"WORD a_mm_scly = ",>')
+word .a_mm_scly
+write using ('"WORD a_ob_off  = ",>')
+word .a_ob_off
+write using ('"WORD a_ob_offy = ",>')
+word .a_ob_offy
+write using ('"WORD a_ob_scl  = ",>')
+word .a_ob_scl
+write using ('"WORD a_ob_scly = ",>')
+word .a_ob_scly
+end
+
+/* ***************************************** */
+/*+ **** dtb -- display voice B tunings **** */
+/* ***************************************** */
+
+if listem then
+write '   dtb'
+endif
+
+def proc dtb = nosource do
+write using ('"BYTE VB.tuning = ",>')
+byte .v+v_len+5t
+write using ('"WORD b_v1_off  = ",>')
+word .b_v1_off
+write using ('"WORD b_v1_offy = ",>')
+word .b_v1_offy
+write using ('"WORD b_v1_scl  = ",>')
+word .b_v1_scl
+write using ('"WORD b_v1_scly = ",>')
+word .b_v1_scly
+write using ('"WORD b_v2_off  = ",>')
+word .b_v2_off
+write using ('"WORD b_v2_offy = ",>')
+word .b_v2_offy
+write using ('"WORD b_v2_scl  = ",>')
+word .b_v2_scl
+write using ('"WORD b_v2_scly = ",>')
+word .b_v2_scly
+write using ('"WORD b_mm_off  = ",>')
+word .b_mm_off
+write using ('"WORD b_mm_offy = ",>')
+word .b_mm_offy
+write using ('"WORD b_mm_scl  = ",>')
+word .b_mm_scl
+write using ('"WORD b_mm_scly = ",>')
+word .b_mm_scly
+write using ('"WORD b_ob_off  = ",>')
+word .b_ob_off
+write using ('"WORD b_ob_offy = ",>')
+word .b_ob_offy
+write using ('"WORD b_ob_scl  = ",>')
+word .b_ob_scl
+write using ('"WORD b_ob_scly = ",>')
+word .b_ob_scly
+end
+
+/* *********************************************** */
+/*+ **** dde -- dump registers for do_env()  ***** */
+/* *********************************************** */
+
+if listem then
+write '   dde'
+endif
+
+def proc dde = nosource do
+write using ('"WORD r_ax     = ",>')
+word .env_regs
+write using ('"WORD r_t0     = ",>')
+word .env_regs+2t
+write using ('"WORD r_t1     = ",>')
+word .env_regs+4t
+write using ('"WORD r_t2     = ",>')
+word .env_regs+6t
+write using ('"WORD r_cnt    = ",>')
+word .env_regs+8t
+write using ('"WORD r_vp     = ",>')
+word .env_regs+10t
+write using ('"WORD r_ep     = ",>')
+word .env_regs+12t
+write using ('"WORD r_stage  = ",>')
+word .env_regs+14t
+write using ('"WORD r_val    = ",>')
+word .env_regs+16t
+write using ('"BYTE r_gate   = ",>')
+byte .env_regs+18t
+write using ('"BYTE r_trig   = ",>')
+byte .env_regs+19t
+write using ('"BYTE r_flags  = ",>')
+byte .env_regs+20t
+write using ('"WORD r_tc     = ",>')
+word .env_regs+22t
+write using ('"WORD kb_track = ",>')
+word .env_regs+24t
+end
+
+/* ************************************************ */
+/*+ **** ddm -- dump registers for do_mods()  ***** */
+/* ************************************************ */
+
+if listem then
+write '   ddm'
+endif
+
+def proc ddm = nosource do
+write using ('"r_aval  ",>')
+dword .dm_regs
+write using ('"r_vp    ",>')
+word .dm_regs+4t
+write using ('"r_mp    ",>')
+word .dm_regs+6t
+write using ('"r_nm    ",>')
+word .dm_regs+8t
+write using ('"r_mlt   ",>')
+word .dm_regs+10t
+write using ('"r_src   ",>')
+word .dm_regs+12t
+write using ('"r_srp   ",>')
+word .dm_regs+14t
+write using ('"r_dsp   ",>')
+word .dm_regs+16t
+write using ('"r_dac   ",>')
+word .dm_regs+18t
+write using ('"r_cvp   ",>')
+word .dm_regs+20t
+write using ('"r_ovp   ",>')
+word .dm_regs+22t
+write using ('"r_temp  ",>')
+word .dm_regs+24t
+end
+
+/* *************************************** */
+/*+ **** dtt(vb) -- dump tuning table **** */
+/* *************************************** */
+
+if listem then
+write '   dtt(vb)'
+endif
+
+def proc dtt = nosource do
+def word tt_base = .v+(%0*v_len)+tt_off
+write 'vp->tunetab[]'
+write using ('"[  0..7  ] = ",>')
+word tt_base len 8t
+write using ('"[  8..15 ] = ",>')
+word tt_base+(2t*8t) len 8t
+write using ('"[ 16..23 ] = ",>')
+word tt_base+(2t*16t) len 8t
+write using ('"[ 24..31 ] = ",>')
+word tt_base+(2t*24t) len 8t
+write using ('"[ 32..39 ] = ",>')
+word tt_base+(2t*32t) len 8t
+write using ('"[ 40..47 ] = ",>')
+word tt_base+(2t*40t) len 8t
+write using ('"[ 48..55 ] = ",>')
+word tt_base+(2t*48t) len 8t
+write using ('"[ 56..63 ] = ",>')
+word tt_base+(2t*56t) len 8t
+write using ('"[ 64..71 ] = ",>')
+word tt_base+(2t*64t) len 8t
+write using ('"[ 72..79 ] = ",>')
+word tt_base+(2t*72t) len 8t
+write using ('"[ 80..87 ] = ",>')
+word tt_base+(2t*80t) len 8t
+write using ('"[ 88..95 ] = ",>')
+word tt_base+(2t*88t) len 8t
+write using ('"[ 96..103] = ",>')
+word tt_base+(2t*96t) len 8t
+write using ('"[104..111] = ",>')
+word tt_base+(2t*104t) len 8t
+write using ('"[112..119] = ",>')
+word tt_base+(2t*112t) len 8t
+write using ('"[120..127] = ",>')
+word tt_base+(2t*120t) len 8t
+end
+
+if listem then
+write '   dtts'
+endif
+
+def lit dtts = 'cls;dtt(0);dtt(1)'
+
+/* ****************************************** */
+/*+ **** dca -- dump channel assignments **** */
+/* ****************************************** */
+
+if listem then
+write '   dca'
+endif
+
+def proc dca = nosource do
+write using ('"WORD stch_tbl[00] = ",>')
+eval word .stch_tbl symbol
+write using ('"WORD stch_tbl[01] = ",>')
+eval word .stch_tbl+2t symbol
+write using ('"WORD stch_tbl[02] = ",>')
+eval word .stch_tbl+4t symbol
+write using ('"WORD stch_tbl[03] = ",>')
+eval word .stch_tbl+6t symbol
+write using ('"WORD stch_tbl[04] = ",>')
+eval word .stch_tbl+8t symbol
+write using ('"WORD stch_tbl[05] = ",>')
+eval word .stch_tbl+10t symbol
+write using ('"WORD stch_tbl[06] = ",>')
+eval word .stch_tbl+12t symbol
+write using ('"WORD stch_tbl[07] = ",>')
+eval word .stch_tbl+14t symbol
+write using ('"WORD stch_tbl[08] = ",>')
+eval word .stch_tbl+16t symbol
+write using ('"WORD stch_tbl[09] = ",>')
+eval word .stch_tbl+18t symbol
+write using ('"WORD stch_tbl[10] = ",>')
+eval word .stch_tbl+20t symbol
+write using ('"WORD stch_tbl[11] = ",>')
+eval word .stch_tbl+22t symbol
+write using ('"WORD stch_tbl[12] = ",>')
+eval word .stch_tbl+24t symbol
+write using ('"WORD stch_tbl[13] = ",>')
+eval word .stch_tbl+26t symbol
+write using ('"WORD stch_tbl[14] = ",>')
+eval word .stch_tbl+28t symbol
+write using ('"WORD stch_tbl[15] = ",>')
+eval word .stch_tbl+30t symbol
+end
+
+/* ****************************************** */
+/*+ **** dpa -- display part assignments **** */
+/* ****************************************** */
+
+if listem then
+write '   dpa'
+endif
+
+def proc dpa = nosource do
+write using ('"WORD stpt_tbl[0] = ",>')
+eval word .stpt_tbl symbol
+write using ('"WORD stpt_tbl[1] = ",>')
+eval word .stpt_tbl+2t symbol
+write using ('"WORD stpt_tbl[2] = ",>')
+eval word .stpt_tbl+4t symbol
+write using ('"WORD stpt_tbl[3] = ",>')
+eval word .stpt_tbl+6t symbol
+write using ('"WORD stpt_tbl[4] = ",>')
+eval word .stpt_tbl+8t symbol
+write using ('"WORD stpt_tbl[5] = ",>')
+eval word .stpt_tbl+10t symbol
+end
+
+/* ******************************************* */
+/*+ **** dva -- display voice assignments **** */
+/* ******************************************* */
+
+if listem then
+write '   dva'
+endif
+
+def proc dva = nosource do
+write using ('"WORD stvc_tbl[00] = ",>')
+eval word .stvc_tbl symbol
+write using ('"WORD stvc_tbl[01] = ",>')
+eval word .stvc_tbl+2t symbol
+write using ('"WORD stvc_tbl[02] = ",>')
+eval word .stvc_tbl+4t symbol
+write using ('"WORD stvc_tbl[03] = ",>')
+eval word .stvc_tbl+6t symbol
+write using ('"WORD stvc_tbl[04] = ",>')
+eval word .stvc_tbl+8t symbol
+write using ('"WORD stvc_tbl[05] = ",>')
+eval word .stvc_tbl+10t symbol
+write using ('"WORD stvc_tbl[06] = ",>')
+eval word .stvc_tbl+12t symbol
+write using ('"WORD stvc_tbl[07] = ",>')
+eval word .stvc_tbl+14t symbol
+write using ('"WORD stvc_tbl[08] = ",>')
+eval word .stvc_tbl+16t symbol
+write using ('"WORD stvc_tbl[09] = ",>')
+eval word .stvc_tbl+18t symbol
+write using ('"WORD stvc_tbl[10] = ",>')
+eval word .stvc_tbl+20t symbol
+write using ('"WORD stvc_tbl[11] = ",>')
+eval word .stvc_tbl+22t symbol
+end
+
+/* ********************************************** */
+/*+ **** dfm(vb) -- dump fixed mods  (0..11) **** */
+/* ********************************************** */
+
+if listem then
+write '   dfm(vb)'
+endif
+
+def proc dfm = nosource do
+def word mod_base = .v+(%0*v_len)+mod_off
+write 'Fixed MODs Addrs    Flag DsSr Mult SrP  DsP  CvP  DAC  NxD'
+write using ('"mods[ 0] = ",>')
+word mod_base len 8t
+write using ('"mods[ 1] = ",>')
+word mod_base+(1t*mod_len) len 8t
+write using ('"mods[ 2] = ",>')
+word mod_base+(2t*mod_len) len 8t
+write using ('"mods[ 3] = ",>')
+word mod_base+(3t*mod_len) len 8t
+write using ('"mods[ 4] = ",>')
+word mod_base+(4t*mod_len) len 8t
+write using ('"mods[ 5] = ",>')
+word mod_base+(5t*mod_len) len 8t
+write using ('"mods[ 6] = ",>')
+word mod_base+(6t*mod_len) len 8t
+write using ('"mods[ 7] = ",>')
+word mod_base+(7t*mod_len) len 8t
+write using ('"mods[ 8] = ",>')
+word mod_base+(8t*mod_len) len 8t
+write using ('"mods[ 9] = ",>')
+word mod_base+(9t*mod_len) len 8t
+write using ('"mods[10] = ",>')
+word mod_base+(10t*mod_len) len 8t
+write using ('"mods[11] = ",>')
+word mod_base+(11t*mod_len) len 8t
+end
+
+/* ********************************************* */
+/*+ **** dum(vb) -- dump user mods (12..23) **** */
+/* ********************************************* */
+
+if listem then
+write '   dum(vb)'
+endif
+
+def proc dum = nosource do
+def word mod_base = .v+(%0*v_len)+mod_off
+write 'User MODs  Addrs    Flag DsSr Mult SrP  DsP  CvP  DAC  NxD'
+write using ('"mods[12] = ",>')
+word mod_base+(12t*mod_len) len 8t
+write using ('"mods[13] = ",>')
+word mod_base+(13t*mod_len) len 8t
+write using ('"mods[14] = ",>')
+word mod_base+(14t*mod_len) len 8t
+write using ('"mods[15] = ",>')
+word mod_base+(15t*mod_len) len 8t
+write using ('"mods[16] = ",>')
+word mod_base+(16t*mod_len) len 8t
+write using ('"mods[17] = ",>')
+word mod_base+(17t*mod_len) len 8t
+write using ('"mods[18] = ",>')
+word mod_base+(18t*mod_len) len 8t
+write using ('"mods[19] = ",>')
+word mod_base+(19t*mod_len) len 8t
+write using ('"mods[20] = ",>')
+word mod_base+(20t*mod_len) len 8t
+write using ('"mods[21] = ",>')
+word mod_base+(21t*mod_len) len 8t
+write using ('"mods[22] = ",>')
+word mod_base+(22t*mod_len) len 8t
+write using ('"mods[23] = ",>')
+word mod_base+(23t*mod_len) len 8t
+end
+
+if listem then
+write '    dfuma, dfumb'		/*+ */
+endif
+
+def lit dfuma = 'cls;dfm(0);write ''--------------------'';dum(0)'
+def lit dfumb = 'cls;dfm(1);write ''--------------------'';dum(1)'
+
+/* ******************************************* */
+/*+ **** denv(vb, n) -- dump a env struct **** */
+/* ******************************************* */
+
+if listem then
+write '   denv'
+endif
+
+def proc denv = nosource do
+def word v_base = .v+(%0*v_len)
+def word env_base = v_base+env_off+(%1*env_len)
+def word out_base = v_base+out_off
+write using ('"+ 0 BYTE mode     = ",>')
+byte env_base
+write using ('"+ 1 BYTE attack   = ",>')
+byte env_base+1t
+write using ('"+ 2 BYTE atck_del = ",>')
+byte env_base+2t
+write using ('"+ 3 BYTE decay    = ",>')
+byte env_base+3t
+write using ('"+ 4 BYTE dcay_del = ",>')
+byte env_base+4t
+write using ('"+ 5 BYTE sustain  = ",>')
+byte env_base+5t
+write using ('"+ 6 BYTE sus_dcay = ",>')
+byte env_base+6t
+write using ('"+ 7 BYTE release  = ",>')
+byte env_base+7t
+write using ('"+ 8 BYTE vel_sens = ",>')
+byte env_base+8t
+write using ('"+ 9 BYTE estep    = ",>')
+byte env_base+9t
+write ''
+write using ('"+10 WORD etcnt    = ",>')
+word env_base+10t
+write using ('"+12 WORD etick    = ",>')
+word env_base+12t
+write using ('"+14 WORD eincr    = ",>')
+word env_base+14t
+write using ('"+16 WORD ecntr    = ",>')
+word env_base+16t
+write using ('"+18 WORD current  = ",>')
+word env_base+18t
+write using ('"+20 WORD s_vel    = ",>')
+word env_base+20t
+write ''
+write using ('"vp->WORD vel      = ",>')
+word v_base+16t
+write using ('"outval[VEL_SENS]  = ",>')
+word out_base+(%1*env_coff)+vt_vsens
+end
+
+/* ******************************************** */
+/*+ **** dvcf(vb, n) -- dump a vcf struct ***** */
+/* ******************************************** */
+
+if listem then
+write '   dvcf(vb, n)'
+endif
+
+def proc dvcf = nosource do
+def word vcf_base = .v+(%0*v_len)+vcf_off+(%1*vcf_len)
+write using ('"+ 0 BYTE vco1  = ",>')
+byte vcf_base
+write using ('"+ 1 BYTE vco2  = ",>')
+byte vcf_base+1t
+write using ('"+ 2 BYTE noise = ",>')
+byte vcf_base+2t
+write using ('"+ 3 BYTE freq  = ",>')
+byte vcf_base+3t
+write using ('"+ 4 BYTE reson = ",>')
+byte vcf_base+4t
+write using ('"+ 5 BYTE envfm = ",>')
+byte vcf_base+5t
+write using ('"+ 6 BYTE lfofm = ",>')
+byte vcf_base+6t
+write using ('"+ 7 BYTE kbtrk = ",>')
+byte vcf_base+7t
+end
+
+if listem then
+write '   dvcfs(vb)'		/*+ */
+endif
+
+def proc dvcfs = nosource do
+cls
+dvcf(%0,0)
+write '-------------------------'
+dvcf(%0,1)
+end
+
+/* ******************************************** */
+/*+ **** dlfo(vb, n) -- dump a LFO struct ***** */
+/* ******************************************** */
+
+if listem then
+write '   dlfo'
+endif
+
+def proc dlfo = nosource do
+def word lfo_base = .v+(%0*v_len)+lfo_off+(%1*lfo_len)
+write using ('"+ 0 BYTE delay  = ",>')
+byte lfo_base
+write using ('"+ 1 BYTE rate   = ",>')
+byte lfo_base+1t
+write using ('"+ 2 BYTE offset = ",>')
+byte lfo_base+2t
+write using ('"+ 3 BYTE quant  = ",>')
+byte lfo_base+3t
+write using ('"+ 4 BYTE shape  = ",>')
+byte lfo_base+4t
+write using ('"+ 5 BYTE lpad   = ",>')
+byte lfo_base+5t
+write using ('"+ 6 WORD tcnt   = ",>')
+byte lfo_base+6t
+write using ('"+ 8 WORD tick   = ",>')
+byte lfo_base+8t
+write using ('"+10 WORD dtcnt  = ",>')
+byte lfo_base+10t
+write using ('"+12 WORD dtick  = ",>')
+byte lfo_base+12t
+write using ('"+14 WORD cntr   = ",>')
+word lfo_base+14t
+write using ('"+16 WORD dcntr  = ",>')
+word lfo_base+16t
+write using ('"+18 WORD rand  = ",>')
+word lfo_base+18t
+write using ('"+20 WORD vold  = ",>')
+word lfo_base+20t
+write using ('"+22 WORD vnew  = ",>')
+word lfo_base+22t
+write''
+write using ('"    INT  curval[rate] = ",>')
+word .v+(%0*v_len)+cur_off+lfo_cur+(%1*lfo_coff)+2
+write using ('"    INT  outval[rate] = ",>')
+word .v+(%0*v_len)+out_off+lfo_cur+(%1*lfo_coff)+2
+write''
+write using ('"    INT  curval[LFO] = ",>')
+word .v+(%0*v_len)+cur_off+lfo_out+(%1*2)
+write using ('"    INT  outval[LFO] = ",>')
+word .v+(%0*v_len)+out_off+lfo_out+(%1*2)
+end
+
+/* ************************************* */
+/*+ **** dasg - display assignments **** */
+/* ************************************* */
+
+if listem then
+write '   dasg'
+endif
+
+def proc dasg = nosource do
+write using ('"WORD vid1   = ",>')
+word .vid1
+write using ('"WORD vid2   = ",>')
+word .vid2
+write using ('"WORD stvc_tbl[0..11] = "')
+adr .stvc_tbl len 12t
+write ''
+write using ('"WORD vchan1 = ",>')
+word .vchan1
+write using ('"WORD vchan2 = ",>')
+word .vchan2
+write using ('"WORD stch_tbl[0..15] = "')
+adr .stch_tbl len 16t
+write ''
+write using ('"WORD vpart1 = ",>')
+word .vpart1
+write using ('"WORD vpart2 = ",>')
+word .vpart2
+write using ('"WORD stpt_tbl[0..5] = "')
+adr .stpt_tbl len 6t
+end
+
+/* ********************************** */
+/*+ **** dst - display ipc state **** */
+/* ********************************** */
+
+if listem then
+write '   dst'
+endif
+
+def proc dst = nosource do
+write using ('"WORD ipc_state = ",>')
+eval word .ipc_state symbol
+end
+
+/* ************************************************* */
+/*+ **** dmm(vb) -- dump modifiable multipliers **** */
+/* ************************************************* */
+
+if listem then
+write '   dmm(vb)'
+endif
+
+def proc dmm = nosource do
+def word cur_base = .v+(%0*v_len)+cur_off
+def word out_base = .v+(%0*v_len)+out_off
+def word mod_base = .v+(%0*v_len)+mod_off
+write 'Fixed MODs Addrs    Flag DsSr Mult SrP  DsP  CvP  DAC  NxD'
+write using ('"mods[ 0] = ",>')
+word mod_base len 8t
+write using ('"mods[ 1] = ",>')
+word mod_base+(1t*mod_len) len 8t
+write using ('"mods[ 2] = ",>')
+word mod_base+(2t*mod_len) len 8t
+write using ('"mods[ 3] = ",>')
+word mod_base+(3t*mod_len) len 8t
+write using ('"mods[ 8] = ",>')
+word mod_base+(8t*mod_len) len 8t
+write using ('"mods[ 9] = ",>')
+word mod_base+(9t*mod_len) len 8t
+write using ('"mods[10] = ",>')
+word mod_base+(10t*mod_len) len 8t
+write using ('"mods[11] = ",>')
+word mod_base+(11t*mod_len) len 8t
+write '----------------------------------------------------------'
+write using ('"curval[VCO1_ENV1FM] = ",>')
+word cur_base+(2*27t)
+write using ('"curval[VCO1_LFO1FM] = ",>')
+word cur_base+(2*28t)
+write using ('"curval[VCO2_ENV1FM] = ",>')
+word cur_base+(2*36t)
+write using ('"curval[VCO2_LFO1FM] = ",>')
+word cur_base+(2*37t)
+write using ('"curval[MM_ENV1FM]   = ",>')
+word cur_base+(2*44t)
+write using ('"curval[MM_LFO1FM]   = ",>')
+word cur_base+(2*45t)
+write using ('"curval[OB_ENV2FM]   = ",>')
+word cur_base+(2*52t)
+write using ('"curval[OB_LFO2FM]   = ",>')
+word cur_base+(2*53t)
+write '----------------------------------------------------------'
+write using ('"outval[VCO1_ENV1FM] = ",>')
+word out_base+(2*27t)
+write using ('"outval[VCO1_LFO1FM] = ",>')
+word out_base+(2*28t)
+write using ('"outval[VCO2_ENV1FM] = ",>')
+word out_base+(2*36t)
+write using ('"outval[VCO2_LFO1FM] = ",>')
+word out_base+(2*37t)
+write using ('"outval[MM_ENV1FM]   = ",>')
+word out_base+(2*44t)
+write using ('"outval[MM_LFO1FM]   = ",>')
+word out_base+(2*45t)
+write using ('"outval[OB_ENV2FM]   = ",>')
+word out_base+(2*52t)
+write using ('"outval[OB_LFO2FM]   = ",>')
+word out_base+(2*53t)
+end
+
+/* ***************************************************** */
+/*+ **** dport(vb) -- display portamento variables ***** */
+/* ***************************************************** */
+
+if listem then
+write '   dport(vb)'
+endif
+
+def proc dport = nosource do
+def word v_base = .v+(%0*v_len)
+def word vco_base = v_base+vco_off
+def word cur_base = v_base+cur_off
+def word out_base = v_base+out_off
+if v_base == .v then
+write using ('"VA  WORD note       = ",>')
+else
+write using ('"VB  WORD note       = ",>')
+endif
+word v_base+18t
+write using ('"outval[TRANSPOSE]   = ",>')
+word out_base+vt_trans
+write using ('"    WORD note1      = ",>')
+word v_base+20t
+write using ('"+ 3 BYTE port       = ",>')
+byte vco_base+3t
+write using ('"+10 WORD ptcnt      = ",>')
+byte vco_base+10t
+write using ('"+12 WORD ptick      = ",>')
+byte vco_base+12t
+write using ('"+14 LONG pinc       = ",>')
+dword vco_base+14t
+write using ('"+18 LONG pacc       = ",>')
+dword vco_base+18t
+write using ('"+22 WORD pdiff      = ",>')
+word vco_base+22t
+write using ('"outval[VCO1_ADJUST] = ",>')
+word out_base+adj_vco1
+write using ('"curval[VCO1_CNOTE]  = ",>')
+word cur_base+pch_vco1
+write using ('"outval[VCO1_CNOTE]  = ",>')
+word out_base+pch_vco1
+write using ('"curval[VCO1_PORT]   = ",>')
+word cur_base+vt_port1
+write using ('"outval[VCO1_PORT]   = ",>')
+word out_base+vt_port1
+write '--------------------------------'
+vco_base = vco_base+vco_len
+write using ('"    WORD note2      = ",>')
+word v_base+22t
+write using ('"+ 3 BYTE port       = ",>')
+byte vco_base+3t
+write using ('"+10 WORD ptcnt      = ",>')
+byte vco_base+10t
+write using ('"+12 WORD ptick      = ",>')
+byte vco_base+12t
+write using ('"+14 LONG pinc       = ",>')
+dword vco_base+14t
+write using ('"+18 LONG pacc       = ",>')
+dword vco_base+18t
+write using ('"+22 WORD pdiff      = ",>')
+word vco_base+22t
+write using ('"outval[VCO2_ADJUST] = ",>')
+word out_base+adj_vco2
+write using ('"curval[VCO2_CNOTE]  = ",>')
+word cur_base+pch_vco2
+write using ('"outval[VCO2_CNOTE]  = ",>')
+word out_base+pch_vco2
+write using ('"curval[VCO2_PORT]   = ",>')
+word cur_base+vt_port2
+write using ('"outval[VCO2_PORT]   = ",>')
+word out_base+vt_port2
+end
+
+if listem then
+write '   dpa, dpb'
+endif
+
+def lit dpa = 'cls;dport(0)'
+def lit dpb = 'cls;dport(1)'
+
+/* ******************************************* */
+/*+ **** denv(vb, n) -- dump a env struct **** */
+/* ******************************************* */
+
+if listem then
+write '   denv'
+endif
+
+def proc denv = nosource do
+def word v_base = .v+(%0*v_len)
+def word env_base = v_base+env_off+(%1*env_len)
+def word out_base = v_base+out_off
+write using ('"+ 0 BYTE mode     = ",>')
+byte env_base
+write using ('"+ 1 BYTE attack   = ",>')
+byte env_base+1t
+write using ('"+ 2 BYTE atck_del = ",>')
+byte env_base+2t
+write using ('"+ 3 BYTE decay    = ",>')
+byte env_base+3t
+write using ('"+ 4 BYTE dcay_del = ",>')
+byte env_base+4t
+write using ('"+ 5 BYTE sustain  = ",>')
+byte env_base+5t
+write using ('"+ 6 BYTE sus_dcay = ",>')
+byte env_base+6t
+write using ('"+ 7 BYTE release  = ",>')
+byte env_base+7t
+write using ('"+ 8 BYTE vel_sens = ",>')
+byte env_base+8t
+write using ('"+ 9 BYTE estep    = ",>')
+byte env_base+9t
+write ''
+write using ('"+10 WORD etcnt    = ",>')
+word env_base+10t
+write using ('"+12 WORD etick    = ",>')
+word env_base+12t
+write using ('"+14 WORD eincr    = ",>')
+word env_base+14t
+write using ('"+16 WORD ecntr    = ",>')
+word env_base+16t
+write using ('"+18 WORD current  = ",>')
+word env_base+18t
+write using ('"+20 WORD s_vel    = ",>')
+word env_base+20t
+write ''
+write using ('"vp->WORD vel      = ",>')
+word v_base+16t
+write using ('"outval[VEL_SENS]  = ",>')
+word out_base+(%1*env_coff)+vt_vsens
+end
+
+if listem then
+write '   dxfa'
+endif
+
+/* ************************************************************ */
+/*+ **** dxfa -- display VCF tuning xy values for voice A ***** */
+/* ************************************************************ */
+
+def proc dxfa = nosource do
+write using ('"a_mm_off  = ",>')
+word .a_mm_off
+write using ('"a_mm_offy = ",>')
+word .a_mm_offy
+write ''
+write using ('"a_mm_scl  = ",>')
+word .a_mm_scl
+write using ('"a_mm_scly = ",>')
+word .a_mm_scly
+write ''
+write using ('"a_ob_off  = ",>')
+word .a_ob_off
+write using ('"a_ob_offy = ",>')
+word .a_ob_offy
+write ''
+write using ('"a_ob_scl  = ",>')
+word .a_ob_scl
+write using ('"a_ob_scly = ",>')
+word .a_ob_scly
+end
+
+if listem then
+write '   dxfb'
+endif
+
+/* ************************************************************ */
+/*+ **** dxfb -- display VCF tuning xy values for voice B ***** */
+/* ************************************************************ */
+
+def proc dxfb = nosource do
+write using ('"b_mm_off  = ",>')
+word .b_mm_off
+write using ('"b_mm_offy = ",>')
+word .b_mm_offy
+write ''
+write using ('"b_mm_scl  = ",>')
+word .b_mm_scl
+write using ('"b_mm_scly = ",>')
+word .b_mm_scly
+write ''
+write using ('"b_ob_off  = ",>')
+word .b_ob_off
+write using ('"b_ob_offy = ",>')
+word .b_ob_offy
+write ''
+write using ('"b_ob_scl  = ",>')
+word .b_ob_scl
+write using ('"b_ob_scly = ",>')
+word .b_ob_scly
+end
+
+if listem then
+write '   dxa,dxb'
+endif
+
+def lit dxa = 'dxoa;write '' '';dxfa'
+def lit dxb = 'dxob;write '' '';dxfb'
+
+/* ******************************************** */
+/*+ **** dvco(vb, n) -- dump a VCO struct ***** */
+/* ******************************************** */
+
+if listem then
+write '   dvco(vb, n)'
+endif
+
+def proc dvco = nosource do
+def word vco_base = .v+(%0*v_len)+vco_off+(%1*vco_len)
+write using ('"+ 0 BYTE pitch  = ",>')
+byte vco_base
+write using ('"+ 1 BYTE fine   = ",>')
+byte vco_base+1t
+write using ('"+ 2 BYTE track  = ",>')
+byte vco_base+2t
+write using ('"+ 3 BYTE port   = ",>')
+byte vco_base+3t
+write using ('"+ 4 BYTE pwidth = ",>')
+byte vco_base+4t
+write using ('"+ 5 BYTE wshape = ",>')
+byte vco_base+5t
+write using ('"+ 6 BYTE vcofm  = ",>')
+byte vco_base+6t
+write using ('"+ 7 BYTE env1fm = ",>')
+byte vco_base+7t
+write using ('"+ 8 BYTE lfo1fm = ",>')
+byte vco_base+8t
+write using ('"+ 9 BYTE pwm    = ",>')
+byte vco_base+9t
+write using ('"+10 WORD ptcnt  = ",>')
+byte vco_base+10t
+write using ('"+12 WORD ptick  = ",>')
+byte vco_base+12t
+write using ('"+14 WORD pincl  = ",>')
+word vco_base+14t
+write using ('"+16 WORD pinch  = ",>')
+word vco_base+16t
+write using ('"+18 WORD paccl  = ",>')
+word vco_base+18t
+write using ('"+20 WORD pacch  = ",>')
+word vco_base+20t
+write using ('"+22 WORD pdiff  = ",>')
+word vco_base+22t
+end
+
+if listem then
+write '   dvcos(vb)'		/*+ */
+endif
+
+/* ***************************************************** */
+/*+ **** dvcos(vb) -- dump VCO structs for a voice ***** */
+/* ***************************************************** */
+
+def proc dvcos = nosource do
+cls
+dvco(%0,0)
+write '--------------------------------'
+dvco(%0,1)
+end
+
+if listem then
+write '    dv1'				/*+ */
+endif
+
+def proc dv1 = nosource do
+cls
+dvco(0,0)
+write '--------------------------------'
+dvco(1,0)
+end
+
+if listem then
+write '    dv2'				/*+ */
+endif
+
+def proc dv2 = nosource do
+cls
+dvco(0,1)
+write '--------------------------------'
+dvco(1,1)
+end
+
+/* The End */

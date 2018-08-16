@@ -1,0 +1,64 @@
+Voltage Controlled Oscillators
+
+	PITCH
+	FINE
+	TRACK
+	PORT
+
+	SHAPE
+
+	VCO2FM
+	ENV1FM
+	LFO1FM
+
+	PWIDTH
+	PWM
+
+Filters
+
+	VCO1
+	VCO2
+	NOISE
+
+	FREQ
+	RESON
+	TRACK
+
+	ENV1FM
+	LFO1FM
+
+Low Frequency Oscillators
+
+	SHAPE
+	DELAY
+	RATE
+	OFFSET
+	S_H
+
+Envelope Generators
+
+	MODE
+
+	ATTACK
+	ATCK_DEL
+
+	DECAY
+	DCAY_DEL
+
+	SUSTAIN
+	SUS_DCAY
+
+	RELEASE
+	VEL_SENS
+
+Final Mix
+
+	LP
+	BP
+	HP
+
+	MM
+
+	PAN
+
+	LEVEL

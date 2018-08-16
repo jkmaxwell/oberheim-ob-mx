@@ -1,0 +1,1265 @@
+background() -- main loop background processing
+
+	Prototype:
+
+		void background()
+
+	Location:
+
+		afiles\HDW.A
+
+	Calls:
+
+		do_env()
+		do_lfo()
+		do_mods()
+		do_port()
+		handle_ipc()
+		tuner()
+	
+	This gets entered, but never returns.  It's the main scan loop.
+
+	We loop waiting for timer_isr() to set bflag so we know a tick has passed.
+
+	When a tick passes, we process all of the timer driven events, such as
+	ENVs and LFOs, and do the modulations.  We also check the IPC FIFO here.
+
+	This is also the driver for portatmento.
+
+	r0 .. r9 get trashed herein.
+
+do_env() -- envelope advance processing
+
+	Prototype:
+
+		void do_env()
+
+	Location:
+
+		afiles\ENV.A
+
+	This happens once per clock interrupt.
+
+	All registers used are private to this process.
+
+	During this process, the following generally holds true:
+
+		r_vp		points at the VOICE data structure
+		r_ep		points at the ENV data structure
+
+		r_cnt		holds the envelope count (4=ENV1, 3=ENV2, 2=ENV3, 1=ENV4)
+
+		r_trig		holds the voice trigger flag, vp->vtrig
+		r_gate		holds the voice gate flag, vp->vgate
+
+do_lfo() -- process the LFOs
+
+	Prototype:
+
+		void do_lfo()
+
+	Location:
+
+		afiles\LFO.A
+
+do_mods() -- do the modulations
+
+	Prototype:
+
+		void do_mods();
+
+	Location:
+
+		afiles\DOMODS.A
+
+	Calls:
+
+		exec_mods
+
+do_mod_dst() -- do modulations for a changed DST value
+
+	Prototype:
+
+		INT do_mod_dst(vp, par, val);
+		struct voice *vp;		voice pointer				&v[VA], &v[VB]
+		BYTE par;				preset parameter number		0..NUM_PARAM
+		WORD val;				initial (current) value		0x0000..0xFFFF
+
+	Returns:
+
+		modulated (output) value			also in: outval[par_val[par]]
+
+	Location:
+
+		afiles\CALC.A
+
+	Checks to be sure that the parameter goes somewhere by looking it up
+	in par_val[].
+
+	Sets vp->curval[par_val[par]] = val
+
+	Follows the DST chain starting at vp->dst_ptr[par_dst[par]] and
+	applies the MODs it finds associated with the parameter.
+
+	Stores modulated value in vp->outval[par_val[par]].
+
+do_mod_src() -- update a changed source value
+
+	Prototype:
+
+		void do_mod_src(vp, ns, val);
+		struct voice *vp;	voice pointer		&v[VA], &v[VB]
+		WORD ns;      		performance parameter (VT) number   0..N_SRCS
+		WORD val;  			initial (current) value		0x0000..0xFFFF
+
+	Location:
+
+		afiles\DOSRC.A
+
+do_port -- do portamento processing
+
+	Not callable from C.
+
+	Location:
+
+		afiles\HDW.A
+
+	Trashes:
+
+		r_cur		r8
+		r_val		r0
+		r_valh		r2
+		r_vp		r4
+		r_op		r6
+
+exec_mods -- do the modulations for a voice
+
+	Location:
+
+		afiles\DOMODS.A
+
+	Not callable from C.
+
+	On entry:
+
+		r_vp		VOICE pointer
+
+flush_hsi() -- flush the HSI FIFO
+
+	Prototype:
+
+		void flush_hsi()
+
+	Location:
+
+		afiles\HDW.A
+
+gate_ungate1() -- gate/ungate VOICE A
+
+	Prototype:
+
+ 		void gate_ungate1();
+
+	Location:
+
+		afiles\GATE.A
+
+gate_ungate2() -- gate/ungate VOICE B
+
+	Prototype:
+
+ 		void gate_ungate2();
+
+	Location:
+
+		afiles\GATE.A
+
+get_id() -- get voice board pair ID
+
+	Prototype:
+
+		WORD get_id()
+
+	Location:
+
+		afiles\HDW.A
+
+	Returns 0x00 to 0x0A
+
+get_tt() -- read in a tuning table from the IPC bus
+
+	Prototype:
+
+		void get_tt(nv)
+		WORD nv;	VOICE number
+
+handle_ipc() -- process the bytes in the IPC input FIFO
+
+	Prototype:
+
+		void handle_ipc()
+
+	Location:
+
+		afiles\VOICEA.A
+
+	Calls:
+
+		(*ipc_state)()
+
+	WARNING: the code relies on the length of ipc_fifo being a power of 2.
+
+	The code will break if the length of ipc_fifo[] is changed to a value
+	which isn't a power of 2, or if FMASK doesn't match the length.
+
+hdw_go() -- enable interrupts
+
+	Prototype:
+
+		void hdw_go()
+
+	Location:
+
+		afiles\HDW.A
+
+hsigo() -- start a HSI measurement cycle
+
+	Prototype:
+
+		void hsigo()
+
+	Location:
+
+		afiles\TUNE.A
+
+hsi_dav_isr -- hsi data available interrupt service routine
+
+	Location:
+
+		afiles\TUNE.A
+
+id_req_state() -- ID request parser state
+
+	Prototype:
+
+		void id_req_state(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		write_ipc()
+
+init_adata() -- initialize RAM
+
+	Prototype:
+
+		void init_adata()
+
+	Location:
+
+		afiles\HDW.A
+
+	This function clears all of the assembly code RAM in adata.  The adata
+	segment is where the assembly code allocates variables.  To keep things
+	consistent with C conventions, we clear it when the program is started.
+
+init_envs() -- initialize envelope data structures
+
+	Prototype:
+
+ 		void init_envs();
+
+	Location:
+
+		afiles\ENV.A
+
+init_hdw() -- initialize hardware
+
+	Prototype:
+
+		void init_hdw()
+
+	Location:
+
+		afiles\HDW.A
+
+	Calls:
+
+		ipc_flush()
+
+	Note: interrupts are expected to be off at this point, but just to be
+	certain we disable them on entry, since we're setting up hardware.
+
+init_ipc() -- initialize IPC
+
+	Prototype:
+
+		void init_ipc() -- initialize IPC
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		reset_parser()
+
+init_lfos() -- initialize LFO data structures
+
+	Prototype:
+
+		void init_lfos()
+
+	Location:
+
+		afiles\MAIN.A
+
+	Calls:
+
+		set_lfo()
+
+init_misc() -- initialize miscellaneous voice variables
+
+	Prototype:
+
+		void init_misc()
+
+	Location:
+
+		afiles\MAIN.A
+
+	Calls:
+
+		set_pan()
+		write_cv()
+
+init_mods() -- initialize MOD data structures
+
+	Prototype:
+
+		void init_mods()
+
+	Location:
+
+		afiles\MAIN.A
+
+	IMPORTANT:  Fixed MODs MUST preceed User MODs in the mods[] table.
+	Several functions (including this one) depend heavily on this ...
+
+init_regs() -- initialize all register variables
+
+	Prototype:
+
+		void init_regs()
+
+	Location:
+
+		afiles\HDW.A
+
+	We clear all of the register variables here to keep consistent with
+	C conventions.
+
+init_tts() -- initialize tuning tables to Equal Tempered scale
+
+	Prototype:
+
+		void init_tts()
+
+	Location:
+
+		afiles\MAIN.A
+
+ipcb_state_1() -- both voices parser state 1
+
+	Prototype:
+
+		void ipcb_state_1(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		ipc_state_0()
+
+ipcb_state_2() -- both voices parser state 2
+
+	Prototype:
+
+		void ipcb_state_2(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		ipc_state_0()
+
+ipc1_state_1() -- voice A parser state 1
+
+	Prototype:
+
+		void ipc1_state_1(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		ipc_state_0()
+
+ipc1_state_2() -- voice A parser state 2
+
+	Prototype:
+
+		void ipc1_state_2(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		ipc_state_0()
+
+ipc2_state_1() -- voice B parser state 1
+
+	Prototype:
+
+		void ipc2_state_1(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		ipc_state_0()
+
+ipc2_state_2() -- voice B parser state 2
+
+	Prototype:
+
+		void ipc2_state_2(dbyte)
+		BYTE dbyte;		input byte
+
+	Location:
+
+		afiles\IPCA.A
+
+	Calls:
+
+		ipc_state_0()
+
+ipc_flush() -- flush the IPC buffers
+
+	Prototype:
+
+		void ipc_flush()
+
+	Location:
+
+		afiles\HDW.A
+
+ipc_isr_in -- IPC receiver interrupt handler
+
+	Location:
+
+		afiles\HDW.A
+
+	Worst case times assume the longest instruction, NORML, 39 cycles.
+	Average times assume 10 cycles for an average instruction.
+
+	One cycle = 166.667 nanoseconds
+
+	Interrupt latency takes:
+
+		61 cycles	10.166 microseconds (worst case)
+		32 cycles	 5.333 microseconds (average) 
+
+	The interrupt handler takes:
+
+		72 cycles	12.000 microseconds
+
+	This gives a range of interrupt processing times of:
+
+		133 cycles	22.166 microseconds (worst case)
+		104 cycles	17.333 microseconds (average)
+
+ipc_isr_out -- IPC transmitter interrupt handler
+
+	Location:
+
+		afiles\HDW.A
+
+ipc_state_0() -- parser state 0
+
+	Prototype:
+
+		void ipc_state_0(stat)
+		BYTE stat;		input byte  (expected to be a command byte...)
+
+	Location:
+
+		afiles\IPCA.A
+
+main() -- this is where it all begins ...
+
+	Prototype:
+
+		void main()
+
+	Location:
+
+		afiles\MAIN.A
+
+	Calls:
+
+		background()
+		get_id()
+		hdw_go()
+		init_envs()
+		init_hdw()
+		init_ipc()
+		init_lfos()
+		init_misc()
+		init_mods()
+		init_tts()
+		srand()
+		tuner()
+		varz()
+
+	WARNING:  varz() MUST be the first thing to happen.  Don't put any
+	executable code in front of the call to varz().  Things will stop
+	working and blow up in strange ways if you do...
+
+	(HINT:  varz() clears assembler RAM and REGISTER variables.)
+
+	NOTE:  background() never returns.
+
+mod_ins() -- insert a MOD structure in the DST list
+
+	Prototype:
+
+		void mod_ins(vp, mp)
+		struct voice *vp;	VOICE pointer
+		struct mod *mp;		MOD pointer
+
+	Location:
+
+		afiles\MODS.A
+
+mod_rmv() -- remove a MOD structure from the DST list
+
+	Prototype:
+
+		void mod_rmv(vp, mp)
+		struct voice *vp;	VOICE pointer
+		struct mod *mp;		MOD pointer
+
+	Location:
+
+		afiles\MODS.A
+
+mod_vca() -- adjust VCA for LEVEL, ENV4 and MIDI levels
+
+	Prototype:
+
+		WORD mod_vca(vp, level);
+		struct voice *vp;		VOICE pointer
+		WORD level;				master VCA level
+
+	Location:
+
+		afiles\DOMODS.A
+
+	This calculates: VCA = (LEVEL + ENV4) - (LEVEL * ENV4)
+						   - 0x3F80 + P_LEVEL
+						   - 0x3F80 + M_LEVEL
+
+never() -- handle bogus message types
+
+	Prototype:
+
+		void never()
+
+	Location:
+
+		afiles\IPC1.A
+
+	We should NEVER see this -- if we do, there's a BUG lurking somewhere...
+
+no_int_vect -- Bad interrupt handler -- we should NEVER end up here
+
+	Location:
+
+		afiles\HDW.A
+
+part_misc() -- process part miscellaneous function
+
+	Prototype:
+
+		void part_misc(vn)
+		WORD vn;	VOICE number
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		do_mod_dst()
+		get_tt()
+		mod_vca()
+		set_pan()
+		set_transpose()
+		write_cv()
+
+part_misc1() -- process part miscellaneous function for voice A
+
+	Prototype:
+
+		void part_misc1()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		part_misc()
+
+part_misc2() -- process part miscellaneous function for voice B
+
+	Prototype:
+
+		void part_misc2()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		part_misc()
+
+part_miscb() -- process part miscellaneous function for both voices
+
+	Prototype:
+
+		void part_miscb()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		part_misc()
+
+perform_param() -- process the receipt of a performance parameter
+
+	Prototype:
+
+		perform_param(vn)
+		BYTE vn;	vn is the voice number, VA = 0 or VB = 1
+
+	Location:
+
+		afiles\IPC2.A
+
+	Calls:
+
+		do_mod_dst()
+		do_mod_src()
+		mod_vca()
+		set_pan()
+		set_transpose()
+		write_cv()
+
+perform_param1() -- process performance parameter for voice A
+
+	Prototype:
+
+		void perform_param1()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		perform_param()
+
+perform_param2() -- process performance parameter for voice B
+
+	Prototype:
+
+		void perform_param2()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		perform_param()
+
+perform_paramb() -- process performance parameter for both voices
+
+	Prototype:
+
+		void perform_paramb()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		perform_param()
+
+preset_param() -- process the receipt of a preset parameter
+
+	Prototype:
+
+		void preset_param(vb)
+		BYTE vb;	voice number, VA = 0 or VB = 1
+
+	Location:
+
+		afiles\IPC2.A
+
+	on entry:
+
+		ipc_byte1 contains the 1st data byte
+		ipc_byte2 contains the 2nd data byte
+
+	Calls:
+
+		do_mod_dst()
+		do_mod_src()
+		mod_vca()
+		set_env()
+		set_lfo()
+		set_pan()
+		set_vcf()
+		set_vco()
+		write_cv()
+
+preset_param1() -- process preset parameter for voice A
+
+	Prototype:
+
+		void preset_param1()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		preset_param()
+
+preset_param2() -- process preset parameter for voice B
+
+	Prototype:
+
+		void preset_param2()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		preset_param()
+
+preset_paramb() -- process performance parameter for both voices
+
+	Prototype:
+
+		void preset_paramb()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		preset_param()
+
+rand() -- generate a 16 bit pseudo-random number
+
+	Prototype:
+
+		WORD rand();
+
+	Location:
+
+		afiles\CALC.A
+
+	Uses a simple 16 bit non-linear feedback shift register
+	with feedback from bits 0 and TAP into bit 15
+
+	Range: 0x0000 .. 0xFFFF
+
+reset_parser() -- reset IPC state machine
+
+	Prototype:
+
+		void reset_parser()
+
+	Location:
+
+		afiles\VOICEA.A
+
+setpots() -- set QuadPot data registers from wiper registers
+
+	Prototype:
+
+		void setpots()
+
+	Location:
+
+		afiles\QPOTS.A
+
+set_adj() -- set the VCO ADJUST values
+
+	Prototype:
+
+		void set_adj()
+
+	Location:
+
+		afiles\IPC2.A
+
+	Calls:
+
+		do_mod_src()
+
+	Calculates the VCO1_ADJUST and VCO2_ADJUST values from
+	VCO1_PITCH, VCO1_FINE, VCO2_PITCH, VCO2_FINE
+
+set_channel1() -- set channel for voice A
+
+	Prototype:
+
+		void set_channel1()
+
+	Location:
+
+		afiles\IPC1.A
+
+set_channel2() -- set channel for voice B
+
+	Prototype:
+
+		void set_channel2()
+
+	Location:
+
+		afiles\IPC1.A
+
+set_env() -- setup ENV parameters
+
+	Prototype:
+
+		WORD set_env(vp, ne)
+		struct voice *vp;	VOICE structure pointer
+		WORD ne;			envelope number
+
+	Location:
+
+		afiles\IPC2.A
+
+	on entry:
+
+		ipc_byte1	parameter number
+
+	returns:
+
+		value to be modulated
+
+set_lfo() -- setup LFO parameters
+
+	Prototype:
+
+		WORD set_lfo(vp, nl)
+		struct voice *vp;	VOICE structure pointer
+		WORD nl;			LFO number
+
+	Location:
+
+		afiles\IPC2.A
+
+	on entry:
+
+		ipc_byte1	parameter number
+		ipc_byte2	data value
+
+	returns:
+
+		value to be modulated.
+
+set_mlt() -- set the multiplier for a patch
+
+	Prototype:
+
+		void set_mlt(vp, ind, val, tbl)
+		struct voice *vp;		voice pointer
+		WORD ind;				MOD index
+		WORD val;				multiplier byte
+		INT *tbl;				multiplier table pointer
+
+	Location:
+
+		afiles\IPC2.A
+
+	Calls:
+
+		mod_ins()
+		mod_rmv()
+
+set_pan() -- set VT_MIX_PAN from p_pan and v_pan
+
+	Prototype:
+
+		WORD set_pan(vb);
+		WORD vb;		voice index: VA=0, VB=1
+
+	Returns:
+
+		PAN CV value:	0x0000 .. 0x7FFF
+
+	Location:
+
+		afiles\CALC.A
+
+set_transpose() -- set VT_TRANSPOSE for a VOICE
+
+	Prototype:
+
+		void set_transpose(vn)
+		WORD vn;	VOICE number: 0,1
+
+	Location:
+
+		afiles\IPC1.A
+
+set_vcf() -- setup VCF parameters
+
+	Prototype:
+
+		WORD set_vcf(vp, nf)
+		struct voice *vp;	voice structure pointer
+		WORD nf;			filter number
+
+	Location:
+
+		afiles\IPC2.A
+
+	on entry:
+
+		ipc_byte1	parameter number
+		ipc_byte2	data value
+
+	returns:
+
+		value to be modulated
+
+	Calls:
+
+		do_mod_src
+
+set_vco() -- setup VCO parameters
+
+	Prototype:
+
+		WORD set_vco(vp, vn)
+		struct voice *vp;	VOICE structure pointer
+		WORD vn;			VCO number
+
+	Location:
+
+		afiles\IPC2.A
+
+	on entry:
+
+		ipc_byte1	parameter number
+		ipc_byte2	data value
+
+	returns:
+
+		parameter value to be modulated.
+
+	Calls:
+
+		do_mod_src()
+		set_mlt()
+		
+srand() -- set seed for pseudo-random number generator
+
+	Prototype:
+
+		WORD srand(seed);
+		WORD seed;				random number seed	0x0000 . 0x7FFF
+
+	Location:
+
+		afiles\CALC.A
+
+start_timer() -- start software timer 0
+
+	Prototype:
+
+		void start_timer();
+
+	Location:
+
+		afiles\HDW.A
+
+Stray interrupt handlers:
+
+	Location:
+
+		afiles\HDW.A
+
+	no_int_vec0		Timer overflow
+	no_int_vec1		A/D conversion complete
+	no_int_vec3		HSO event
+	no_int_vec4		HSI.0 pin
+	no_int_vec6		Serial port
+	no_int_vec7		EXTINT
+	no_int_vec10	HSI 4'th entry into HSI FIFO
+	no_int_vec11	TIMER2 capture
+	no_int_vec12	TIMER2 overflow
+	no_int_vec13	EXTINT1
+	no_int_vec14	HSI FIFO full
+	no_int_vec15	NMI
+	no_int_trap		Trap
+	no_int_badop	Unimplemented opcode
+
+timer_isr -- software timer 0 interrupt handler
+
+	Location:
+
+		afiles\HDW.A
+
+	Here we update the DACs and set bflag to indicate to the background()
+	function that a timer period has passed.
+
+	This is also where other software timer, timer 2 reset, and A/D start
+	interrupts end up.  We don't use them, though, so we just assume this
+	interrupt's for us to save processing time...
+
+tuner() -- tune the oscillators and filters
+
+	Prototype:
+
+		void tuner()
+
+	Location:
+
+		afiles\TUNE.A
+
+	Calls:
+
+		handle_ipc()
+		hsigo()
+		set_adj()
+
+user_mod() -- process the receipt of a user modulation
+
+	Prototype:
+
+		void user_mod(vb)
+		BYTE vb;	voice number, VA = 0 or VB = 1
+
+	Location:
+
+		afiles\IPC2.A
+
+	on entry:
+
+		ipc_byte1	item (0..2) and user MOD number (0..11)		(0iiimmmm)
+		ipc_byte2	new value for item (..127)					(0vvvvvvv)
+
+	Calls:
+
+		mod_ins()
+		mod_rmv()
+
+user_mod1() -- process user mod for voice A
+
+	Prototype:
+
+		void user_mod1()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		user_mod()
+
+user_mod2() -- process user mod for voice B
+
+	Prototype:
+
+		void user_mod2()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		user_mod()
+
+user_modb() -- process user mod for both voices
+
+	Prototype:
+
+		void user_modb()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		user_mod()
+
+varz() -- clear assembler register and RAM variables
+
+	Prototype:
+
+		void varz()
+
+	Location:
+
+		afiles\VARS.A
+
+	Calls:
+
+		init_adata()
+		init_regs()
+
+	The main reason for this function was so that the ICE-196 would know where
+	to find the variables...
+
+	We now clear the assembler register and RAM variables here.
+
+voice_misc() -- process voice miscellaneous function
+
+	Prototype:
+
+		void voice_misc(vn)
+		WORD vn;	VOICE number
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		setpots()
+		set_transpose()
+		wqpot3()
+		write_ipc()
+
+voice_misc1() -- process voice A miscellaneous function
+
+	Prototype:
+
+		void voice_misc1()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		voice_misc()
+
+voice_misc2() -- process voice B miscellaneous function
+
+	Prototype:
+
+		voice_misc2()
+
+	Location:
+
+		afiles\IPC1.A
+
+	Calls:
+
+		voice_misc()
+
+wqpot2() -- write a 2-byte command to a quadpot
+
+	Prototype:
+
+		void wqpot2(pot, cmd)
+		WORD pot;	pot address		050H..053H		iiii pp rr
+		WORD cmd;	pot command		000H..0FFH		0101 00 pp
+
+	Location:
+
+		afiles\QPOTS.A
+
+wqpot3() -- write a 3-byte command to a quadpot
+
+	Prototype:
+
+		void wqpot3(pot, cmd, val)
+		WORD pot;	pot address
+		WORD cmd;	pot command
+		WORD val;	pot value
+
+	Location:
+
+		afiles\QPOTS.A
+
+write_cv() -- write a value to a CV
+
+	Prototype:
+
+		void write_cv(vb, cvnum, val)V
+		BYTE vb;		voice index, VA or VB
+		WORD cvnum;		CV number  (00..31)
+		INT val;		value  (in low 12 bits, 11..00)
+
+	Location:
+
+		afiles\HDW.A
+
+	Trashes:	r0, r2, r4
+
+	Updates:	cvtable[dacmap[cvnum+(vb EQ VA ? 0 : 32)]]
+
+write_ipc() -- write a byte to the IPC
+
+	Prototype:
+
+		void write_ipc(ipcbyte)
+		BYTE ipcbyte;
+
+	Location:
+
+		afiles\HDW.A
+
